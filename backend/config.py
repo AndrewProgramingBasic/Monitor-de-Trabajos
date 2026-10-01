@@ -21,22 +21,9 @@ class AppConfig:
     DB_NAME = os.getenv("DB_NAME", os.getenv("POSTGRES_DB", "vpti_tasks_db"))
 
     # Resolve default host depending on runtime environment
-    _default_host = "host.docker.internal" if IS_DOCKER else "127.0.0.1"
-    DB_HOST = os.getenv("DB_HOST", _default_host)
+    DB_HOST = os.getenv("DB_HOST", "localhost")
 
-    # Full DATABASE_URL handling
-    DATABASE_URL = os.getenv("DATABASE_URL")
-    if not DATABASE_URL:
-        DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-    else:
-        # If running inside Docker but DATABASE_URL points to localhost/127.0.0.1, adapt it to the host gateway
-        if IS_DOCKER and (
-            "@127.0.0.1:" in DATABASE_URL or "@localhost:" in DATABASE_URL
-        ):
-            DATABASE_URL = (
-                DATABASE_URL.replace("@127.0.0.1:", "@host.docker.internal:")
-                .replace("@localhost:", "@host.docker.internal:")
-            )
+    DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
     # Timing and scheduler properties
     TIMEZONE = os.getenv("TIMEZONE", "America/Caracas")
