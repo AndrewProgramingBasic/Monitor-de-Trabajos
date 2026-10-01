@@ -7,23 +7,9 @@ load_dotenv()
 
 class AppConfig:
     """Application and scheduler configuration loaded from environment variables."""
-
-    # Environment mode
-    IS_DOCKER = (
-        os.path.exists("/.dockerenv")
-        or os.getenv("IS_DOCKER", "false").lower() == "true"
-    )
-
-    # Database parameters
-    DB_USER = os.getenv("DB_USER", os.getenv("POSTGRES_USER", "postgres"))
-    DB_PASSWORD = os.getenv("DB_PASSWORD", os.getenv("POSTGRES_PASSWORD", ""))
-    DB_PORT = os.getenv("DB_PORT", os.getenv("POSTGRES_PORT", "5433"))
-    DB_NAME = os.getenv("DB_NAME", os.getenv("POSTGRES_DB", "vpti_tasks_db"))
-
-    # Resolve default host depending on runtime environment
-    DB_HOST = os.getenv("DB_HOST", "localhost")
-
-    DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    # Full DATABASE_URL handling
+    DATABASE_URL = os.getenv("DATABASE_URL")
+    
 
     # Timing and scheduler properties
     TIMEZONE = os.getenv("TIMEZONE", "America/Caracas")
