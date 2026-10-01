@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vpti_backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    networks:
+      - vpti_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: vpti_frontend
+    restart: unless-stopped
+    env_file:
+      - ./frontend/.env.local
+    ports:
+      - "3005:3000"
+    environment:
+      VIRTUAL_HOST: taskmanager.adantechti.com
+    depends_on:
+      - backend
+    networks:
+      - vpti_network
+    
+
+networks:
+  vpti_network:
+    name: vpti_network
+    driver: bridge

@@ -1,7 +1,7 @@
 // API Client Utility for VPTI Task Monitor
 
 const API_BASE_URL = (
-  process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api'
+  process.env.NEXT_PUBLIC_API_URL || '/api'
 ).replace(/\/$/, '')
 
 const TOKEN_KEY = 'vpti_access_token'
@@ -119,9 +119,14 @@ async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = path.startsWith('http://') || path.startsWith('https://')
-    ? path
-    : `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`
+  let url: string
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    url = path
+  } else if (path.startsWith('/api/') || path === '/api') {
+    url = path
+  } else {
+    url = `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`
+  }
 
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string>),

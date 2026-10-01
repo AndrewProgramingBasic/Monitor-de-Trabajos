@@ -109,7 +109,7 @@ export async function subscribeToPush(customVapidKey?: string): Promise<boolean>
   }
 
   const rawApiUrl =
-    process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api'
+    process.env.NEXT_PUBLIC_API_URL || '/api'
   const apiUrl = rawApiUrl.replace(/\/$/, '')
 
   let vapidKey = customVapidKey || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY

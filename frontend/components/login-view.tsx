@@ -129,7 +129,7 @@ export function LoginView({ onSignIn }: LoginViewProps) {
             <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
               <span className="inline-flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300">
                 <span className="size-2 rounded-full bg-emerald-500" />
-                API Conectada (127.0.0.1:5000)
+                API Conectada
               </span>
               <span>Acceso seguro JWT</span>
             </div>
