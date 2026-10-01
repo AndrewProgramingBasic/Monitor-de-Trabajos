@@ -26,9 +26,8 @@ services:
       - backend
     networks:
       - vpti_internal_net
-    
 
 networks:
   vpti_internal_net:
+    external: true
     name: vpti_internal_net
-    driver: bridge
