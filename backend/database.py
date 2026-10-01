@@ -6,7 +6,7 @@ import bcrypt
 import psycopg2
 from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
-from config import Config
+from config import AppConfig, Config
 
 logger = logging.getLogger("vpti.database")
 
@@ -58,27 +58,43 @@ def get_pool() -> pool.ThreadedConnectionPool:
     return _connection_pool
 
 
-def init_pool(minconn: int = 1, maxconn: int = 20):
+def init_pool(minconn: int = 1, maxconn: int = 10):
     """
     Initializes the ThreadedConnectionPool using configuration parameters.
+    Directly uses AppConfig.DATABASE_URL (or parsed parameters if needed).
     """
     global _connection_pool
     if _connection_pool is not None:
         return
 
-    params = parse_database_url(Config.DATABASE_URL)
-    logger.info(
-        "Initializing PostgreSQL connection pool to host=%s, port=%s, db=%s",
-        params.get("host"),
-        params.get("port"),
-        params.get("dbname"),
-    )
+    db_url = getattr(AppConfig, "DATABASE_URL", None) or getattr(Config, "DATABASE_URL", None)
+    logger.info("Initializing PostgreSQL connection pool (min=%d, max=%d)...", minconn, maxconn)
     try:
-        _connection_pool = pool.ThreadedConnectionPool(
-            minconn=minconn,
-            maxconn=maxconn,
-            **params,
-        )
+        if db_url:
+            try:
+                _connection_pool = pool.ThreadedConnectionPool(
+                    minconn=minconn,
+                    maxconn=maxconn,
+                    dsn=db_url,
+                )
+            except Exception as dsn_exc:
+                logger.warning(
+                    "Direct DSN connection pool initialization encountered error: %s. Falling back to parsed kwargs.",
+                    dsn_exc,
+                )
+                params = parse_database_url(db_url)
+                _connection_pool = pool.ThreadedConnectionPool(
+                    minconn=minconn,
+                    maxconn=maxconn,
+                    **params,
+                )
+        else:
+            params = parse_database_url(Config.DATABASE_URL)
+            _connection_pool = pool.ThreadedConnectionPool(
+                minconn=minconn,
+                maxconn=maxconn,
+                **params,
+            )
         logger.info("PostgreSQL connection pool initialized successfully.")
     except Exception as exc:
         logger.error("Failed to initialize PostgreSQL connection pool: %s", exc)
