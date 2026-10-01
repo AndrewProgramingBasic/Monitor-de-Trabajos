@@ -7,11 +7,6 @@ services:
     restart: unless-stopped
     env_file:
       - ./backend/.env
-    environment:
-      - IS_DOCKER=true
-      - DB_HOST=host.docker.internal
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     networks:
       - vpti_network
 
@@ -31,6 +26,7 @@ services:
       - backend
     networks:
       - vpti_network
+    
 
 networks:
   vpti_network:
