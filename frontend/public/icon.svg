@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="100%" height="100%" fill="none">
+  <defs>
+    <!-- Gradiente de fondo -->
+    <linearGradient id="vpti-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563EB" />
+      <stop offset="100%" stop-color="#1D4ED8" />
+    </linearGradient>
+
+    <!-- Gradiente de acento cian/teal -->
+    <linearGradient id="vpti-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#06B6D4" />
+    </linearGradient>
+
+    <!-- Sombra sutil -->
+    <filter id="vpti-shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#1E3A8A" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Contenedor exterior estilizado tipo App Icon -->
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#vpti-bg)" filter="url(#vpti-shadow)" />
+
+  <!-- Anillo exterior de radar / temporizador de ventana técnica -->
+  <circle cx="64" cy="64" r="42" stroke="white" stroke-opacity="0.15" stroke-width="4" stroke-linecap="round" />
+  
+  <!-- Arco activo del radar (3/4 de vuelta que simboliza progreso y monitoreo) -->
+  <path d="M 64 22 A 42 42 0 1 1 27 84" 
+        stroke="url(#vpti-accent)" 
+        stroke-width="5" 
+        stroke-linecap="round" />
+
+  <!-- Pulso / Onda concéntrica de notificación push -->
+  <path d="M 76 34 A 26 26 0 0 1 90 64" 
+        stroke="#38BDF8" 
+        stroke-width="3.5" 
+        stroke-linecap="round" 
+        stroke-dasharray="2 6" />
+
+  <!-- Símbolo central: Torre de Telecomunicaciones / Nodo de Infraestructura unificado con un Check técnico -->
+  <!-- Base y cuerpo del transmisor -->
+  <path d="M 52 88 L 64 42 L 76 88" 
+        stroke="white" 
+        stroke-width="5" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" />
+  
+  <!-- Travesaño de soporte de red -->
+  <line x1="56" y1="74" x2="72" y2="74" 
+        stroke="white" 
+        stroke-width="4" 
+        stroke-linecap="round" />
+
+  <!-- Núcleo de sincronización y emisión en la cima (Nodo central de alerta) -->
+  <circle cx="64" cy="40" r="7" fill="url(#vpti-accent)" stroke="white" stroke-width="2.5" />
+
+  <!-- Punto de estado activo en vivo (Live Status indicator) -->
+  <circle cx="94" cy="34" r="5" fill="#22C55E" stroke="#1D4ED8" stroke-width="2" />
+</svg>

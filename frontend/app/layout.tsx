@@ -1,11 +1,14 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
+import { Toaster } from 'sonner'
+import { AuthProvider } from '@/lib/auth-context'
 import './globals.css'
 
 export const metadata: Metadata = {
   title: 'VPTI Task Monitor & Notifications',
   description: 'Panel operativo para la programación, seguimiento y alertas del comité técnico VPTI.',
   generator: 'v0.app',
+  manifest: '/manifest.json',
   icons: {
     icon: [
       {
@@ -41,7 +44,10 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className="antialiased">
-        {children}
+        <AuthProvider>
+          {children}
+          <Toaster richColors position="top-right" closeButton />
+        </AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

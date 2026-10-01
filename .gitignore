@@ -1,4 +1,82 @@
-# v0 sandbox internal files
+# ==========================================
+# 1. Variables de entorno y credenciales (CRÍTICO)
+# ==========================================
+.env
+.env.*
+!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Claves VAPID o certificados locales
+*.pem
+*.key
+vapid_private.json
+
+# ==========================================
+# 2. Entornos y librerías de Python (Backend)
+# ==========================================
+# Entornos virtuales
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Bytecode y cachés de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# SQLite o bases de datos de prueba locales
+*.sqlite
+*.sqlite3
+*.db
+
+# ==========================================
+# 3. Node / Next.js / React (Frontend)
+# ==========================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Compilación y caché de Next.js
+.next/
+out/
+build/
+dist/
+.turbo/
+
+# Tipados autogenerados
+next-env.d.ts
+
+# ==========================================
+# 4. Archivos temporales de oficina y subidas
+# ==========================================
+# Temporales generados al abrir Excels de matrices (.xlsx, .xls)
+~$*.xlsx
+~$*.xls
+*.tmp
+# Carpeta local de subidas o uploads si no se usa S3
+/backend/uploads/*
+!/backend/uploads/.gitkeep
+/uploads/*
+!/uploads/.gitkeep
+
+# ==========================================
+# 5. Entornos v0 Sandbox / Vercel
+# ==========================================
 __v0_runtime_loader.js
 __v0_devtools.tsx
 __v0_jsx-dev-runtime.ts
@@ -6,10 +84,23 @@ __v0_jsx-dev-runtime.ts
 .v0-trash/
 .vercel/
 
-# Environment variables
-.env*.local
-
-# Common ignores
-node_modules
-.next/
+# ==========================================
+# 6. IDEs, Editores y Sistema Operativo
+# ==========================================
 .DS_Store
+Thumbs.db
+desktop.ini
+
+# VS Code y DBeaver
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.dbeaver/
