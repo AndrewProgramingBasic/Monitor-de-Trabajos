@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM 22.23.3-alpine3.24 AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
@@ -13,7 +13,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # Stage 2: Production Runner
-FROM 22.23.3-alpine3.24 AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
