@@ -8,7 +8,7 @@ services:
     env_file:
       - ./backend/.env
     networks:
-      - vpti_network
+      - vpti_internal_net
 
   frontend:
     build:
@@ -25,10 +25,10 @@ services:
     depends_on:
       - backend
     networks:
-      - vpti_network
+      - vpti_internal_net
     
 
 networks:
-  vpti_network:
-    name: vpti_network
+  vpti_internal_net:
+    name: vpti_internal_net
     driver: bridge
