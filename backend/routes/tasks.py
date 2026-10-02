@@ -26,6 +26,7 @@ def serialize_task_record(row: dict[str, Any]) -> dict[str, Any]:
         "affectation_start",
         "affectation_end",
         "alert_sent_at",
+        "manual_status_updated_at",
         "created_at",
         "updated_at",
         "sheet_uploaded_at",
@@ -400,3 +401,167 @@ def patch_task(task_id: int):
         start_changed,
     )
     return jsonify(serialize_task_record(updated_record)), 200
+
+
+@tasks_bp.route("/api/tasks/<int:task_id>", methods=["PUT"])
+@jwt_required()
+def update_task(task_id: int):
+    """
+    Updates an existing scheduled task:
+      - cdc_number: sanitized and trimmed. If 'S/N' or empty, saved as NULL. Otherwise saved as cleaned CDC.
+      - manual_status: 'SUSPENDIDO', 'TERMINADO', 'AUTO', or None/empty.
+          - 'AUTO' or None/empty resets manual_status to NULL.
+          - 'SUSPENDIDO' or 'TERMINADO' sets manual_status, manual_status_updated_at=NOW(), manual_status_updated_by=current_user.
+      - start_datetime / end_datetime (optional): validates chronological window, resets alert if start changed.
+      - title / justification (optional): string updates.
+      - audit logging: updated_at=NOW(), updated_by=current_user.
+    """
+    user_id = int(get_jwt_identity())
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "Cuerpo de solicitud JSON requerido."}), 400
+
+    # Retrieve existing task
+    with get_db_cursor(commit=False) as cur:
+        cur.execute(
+            "SELECT id, cdc_number, manual_status, start_datetime, end_datetime FROM scheduled_tasks WHERE id = %s;",
+            (task_id,),
+        )
+        existing = cur.fetchone()
+
+    if not existing:
+        return jsonify({"error": f"Tarea con ID {task_id} no encontrada."}), 404
+
+    update_fields = []
+    params = []
+
+    # 1. cdc_number update
+    if "cdc_number" in data:
+        raw_cdc = data.get("cdc_number")
+        if raw_cdc is None:
+            cleaned_cdc = None
+        else:
+            str_cdc = str(raw_cdc).strip()
+            if str_cdc.upper() in ("S/N", "SN", "SIN NUMERO", "SIN NÚMERO", ""):
+                cleaned_cdc = None
+            else:
+                cleaned = clean_cdc_number(str_cdc)
+                cleaned_cdc = cleaned if cleaned else str_cdc
+
+        update_fields.append("cdc_number = %s")
+        params.append(cleaned_cdc)
+
+    # 2. manual_status update
+    if "manual_status" in data:
+        raw_status = data.get("manual_status")
+        if raw_status is None or str(raw_status).strip().upper() in ("AUTO", "NULL", "NONE", ""):
+            update_fields.append("manual_status = NULL")
+            update_fields.append("manual_status_updated_at = NOW()")
+            update_fields.append("manual_status_updated_by = %s")
+            params.append(user_id)
+        else:
+            status_str = str(raw_status).strip().upper()
+            if status_str not in ("SUSPENDIDO", "TERMINADO"):
+                return (
+                    jsonify(
+                        {
+                            "error": f"Estado manual inválido: '{raw_status}'. Valores permitidos: 'SUSPENDIDO', 'TERMINADO', 'AUTO' o null."
+                        }
+                    ),
+                    400,
+                )
+            update_fields.append("manual_status = %s")
+            params.append(status_str)
+            update_fields.append("manual_status_updated_at = NOW()")
+            update_fields.append("manual_status_updated_by = %s")
+            params.append(user_id)
+
+    # 3. Optional title & justification
+    if "title" in data:
+        title_val = str(data.get("title", "")).strip()
+        if not title_val:
+            return jsonify({"error": "El título no puede estar vacío."}), 400
+        update_fields.append("title = %s")
+        params.append(title_val)
+
+    if "justification" in data:
+        update_fields.append("justification = %s")
+        params.append(str(data.get("justification", "")).strip() if data.get("justification") else None)
+
+    # 4. Optional start_datetime & end_datetime
+    new_start = existing["start_datetime"]
+    new_end = existing["end_datetime"]
+    start_changed = False
+
+    if "start_datetime" in data and data["start_datetime"]:
+        try:
+            new_start = normalize_spanish_datetime(
+                data["start_datetime"],
+                is_mandatory=True,
+                field_name="start_datetime",
+            )
+        except ValueError as val_err:
+            return jsonify({"error": str(val_err)}), 400
+
+        update_fields.append("start_datetime = %s")
+        params.append(new_start)
+        start_changed = True
+
+    if "end_datetime" in data and data["end_datetime"]:
+        try:
+            new_end = normalize_spanish_datetime(
+                data["end_datetime"],
+                is_mandatory=True,
+                field_name="end_datetime",
+            )
+        except ValueError as val_err:
+            return jsonify({"error": str(val_err)}), 400
+
+        update_fields.append("end_datetime = %s")
+        params.append(new_end)
+
+    if ("start_datetime" in data or "end_datetime" in data) and new_start and new_end:
+        tz = pytz.timezone(Config.TIMEZONE)
+        if getattr(new_start, "tzinfo", None) is None:
+            new_start = tz.localize(new_start)
+        if getattr(new_end, "tzinfo", None) is None:
+            new_end = tz.localize(new_end)
+        if new_end < new_start:
+            return (
+                jsonify(
+                    {"error": "La fecha fin no puede ser anterior a la fecha inicio."}
+                ),
+                400,
+            )
+
+    if start_changed:
+        update_fields.append("alert_1h_sent = FALSE")
+        update_fields.append("alert_sent_at = NULL")
+
+    if not update_fields:
+        return jsonify({"error": "No se enviaron campos válidos para actualizar."}), 400
+
+    # 5. Audit logging
+    update_fields.append("updated_by = %s")
+    params.append(user_id)
+    update_fields.append("updated_at = NOW()")
+
+    params.append(task_id)
+
+    set_clause = ", ".join(update_fields)
+    update_sql = f"""
+        UPDATE scheduled_tasks
+        SET {set_clause}
+        WHERE id = %s;
+    """
+
+    with get_db_cursor(commit=True) as cur:
+        cur.execute(update_sql, tuple(params))
+        cur.execute(
+            "SELECT * FROM v_scheduled_tasks WHERE id = %s;", (task_id,)
+        )
+        updated_record = cur.fetchone()
+
+    logger.info("Task #%d updated via PUT by user #%d", task_id, user_id)
+    return jsonify(serialize_task_record(updated_record)), 200
+

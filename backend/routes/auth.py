@@ -114,6 +114,119 @@ def get_current_user():
     return jsonify(user), 200
 
 
+@auth_bp.route("/api/auth/me", methods=["PUT"])
+@jwt_required()
+def update_current_user():
+    """
+    Updates the authenticated user's profile:
+      - full_name
+      - email (checking uniqueness against other users)
+      - password (optional; requires current_password verification if changing)
+    """
+    user_id = get_jwt_identity()
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "Cuerpo de solicitud JSON requerido."}), 400
+
+    with get_db_cursor(commit=False) as cur:
+        cur.execute(
+            """
+            SELECT id, username, email, full_name, password_hash, created_at, created_by_user_id
+            FROM users
+            WHERE id = %s;
+            """,
+            (user_id,),
+        )
+        user = cur.fetchone()
+
+    if not user:
+        return jsonify({"error": "Usuario no encontrado."}), 404
+
+    # 1. Update full_name
+    full_name = str(data.get("full_name", user["full_name"])).strip()
+    if not full_name:
+        return jsonify({"error": "El nombre completo no puede estar vacío."}), 400
+
+    # 2. Update email
+    email = str(data.get("email", user["email"])).strip().lower()
+    if not email:
+        return jsonify({"error": "El correo electrónico no puede estar vacío."}), 400
+
+    # Check email uniqueness if changed
+    if email.lower() != user["email"].lower():
+        with get_db_cursor(commit=False) as cur:
+            cur.execute(
+                "SELECT id FROM users WHERE LOWER(email) = LOWER(%s) AND id != %s;",
+                (email, user_id),
+            )
+            if cur.fetchone():
+                return jsonify({"error": f"El correo electrónico '{email}' ya está registrado por otro usuario."}), 409
+
+    # 3. Optional password update
+    new_password = str(data.get("new_password") or data.get("password") or "").strip()
+    hashed_pw = None
+    if new_password:
+        if len(new_password) < 6:
+            return jsonify({"error": "La nueva contraseña debe tener al menos 6 caracteres."}), 400
+
+        current_password = str(data.get("current_password", "")).strip()
+        if not current_password:
+            return (
+                jsonify(
+                    {"error": "Debe proporcionar su contraseña actual para confirmar el cambio de clave."}
+                ),
+                400,
+            )
+
+        stored_hash = user["password_hash"]
+        try:
+            is_valid = bcrypt.checkpw(
+                current_password.encode("utf-8"), stored_hash.encode("utf-8")
+            )
+        except Exception:
+            is_valid = False
+
+        if not is_valid:
+            return (
+                jsonify(
+                    {"error": "La contraseña actual es incorrecta."}
+                ),
+                401,
+            )
+
+        hashed_pw = bcrypt.hashpw(
+            new_password.encode("utf-8"), bcrypt.gensalt(10)
+        ).decode("utf-8")
+
+    # 4. Perform update
+    update_fields = ["full_name = %s", "email = %s"]
+    params = [full_name, email]
+
+    if hashed_pw:
+        update_fields.append("password_hash = %s")
+        params.append(hashed_pw)
+
+    params.append(user_id)
+    set_clause = ", ".join(update_fields)
+    query = f"""
+        UPDATE users
+        SET {set_clause}
+        WHERE id = %s
+        RETURNING id, username, email, full_name, created_at, created_by_user_id;
+    """
+
+    with get_db_cursor(commit=True) as cur:
+        cur.execute(query, tuple(params))
+        updated_user = cur.fetchone()
+
+    if updated_user.get("created_at") and hasattr(updated_user["created_at"], "isoformat"):
+        updated_user["created_at"] = updated_user["created_at"].isoformat()
+
+    logger.info("User #%s profile updated successfully", user_id)
+    return jsonify(updated_user), 200
+
+
+
 @auth_bp.route("/api/users", methods=["POST"])
 @jwt_required()
 def create_user():

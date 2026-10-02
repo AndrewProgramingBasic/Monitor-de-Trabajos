@@ -46,6 +46,28 @@ def client(monkeypatch):
                 uid = int(self.last_params[0])
                 return users_db.get(uid)
 
+            if "select id, username, email, full_name, password_hash, created_at, created_by_user_id" in q:
+                uid = int(self.last_params[0])
+                return users_db.get(uid)
+
+            if "select id from users where lower(email)" in q:
+                uemail = self.last_params[0].lower()
+                exclude_id = int(self.last_params[1])
+                for u in users_db.values():
+                    if u["id"] != exclude_id and u["email"].lower() == uemail:
+                        return {"id": u["id"]}
+                return None
+
+            if "update users" in q:
+                uid = int(self.last_params[-1])
+                if uid in users_db:
+                    users_db[uid]["full_name"] = self.last_params[0]
+                    users_db[uid]["email"] = self.last_params[1]
+                    if len(self.last_params) == 4:
+                        users_db[uid]["password_hash"] = self.last_params[2]
+                    return users_db[uid]
+                return None
+
             if "select id, username, email from users" in q:
                 # Uniqueness query
                 uname = self.last_params[0].lower()
@@ -194,3 +216,49 @@ def test_health_check(client):
     assert data["database_connected"] is True
     assert data["timezone"] == "America/Caracas"
     assert "server_time" in data
+
+
+def test_update_current_user(client):
+    login_res = client.post(
+        "/api/auth/login",
+        json={"username_or_email": "aandra05", "password": "ClaveSegura2026*"},
+    )
+    token = login_res.get_json()["access_token"]
+
+    # 1. Update full_name and email without changing password
+    res = client.put(
+        "/api/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "full_name": "Andrew Andrades Admin",
+            "email": "aandrades.new@adantechti.com",
+        },
+    )
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["full_name"] == "Andrew Andrades Admin"
+    assert data["email"] == "aandrades.new@adantechti.com"
+
+    # 2. Update with invalid current_password
+    res_bad_pw = client.put(
+        "/api/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "current_password": "WrongPassword!",
+            "new_password": "NewSecret2026*",
+        },
+    )
+    assert res_bad_pw.status_code == 401
+    assert "incorrecta" in res_bad_pw.get_json()["error"]
+
+    # 3. Update with valid current_password
+    res_ok_pw = client.put(
+        "/api/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "current_password": "ClaveSegura2026*",
+            "new_password": "NewSecret2026*",
+        },
+    )
+    assert res_ok_pw.status_code == 200
+

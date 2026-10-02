@@ -43,13 +43,17 @@ export interface ScheduledTask {
   parent_task_id: number | null
   alert_1h_sent: boolean
   alert_sent_at: string | null
+  manual_status?: string | null
+  manual_status_updated_at?: string | null
+  manual_status_updated_by?: number | null
+  manual_status_updated_by_name?: string | null
   created_at: string
   created_by: number | null
   created_by_name?: string | null
   updated_at: string | null
   updated_by: number | null
   updated_by_name?: string | null
-  execution_status: 'PROGRAMADO' | 'PROXIMO (MENOS DE 1 HORA)' | 'EN EJECUCION' | 'TERMINADO' | string
+  execution_status: 'PROGRAMADO' | 'PROXIMO (MENOS DE 1 HORA)' | 'EN EJECUCION' | 'TERMINADO' | 'SUSPENDIDO' | string
 }
 
 export interface CommitteeSheet {
@@ -214,6 +218,20 @@ export const api = {
     return request<T>(path, {
       ...options,
       method: 'PATCH',
+      headers,
+      body: JSON.stringify(body),
+    })
+  },
+
+  put<T>(path: string, body?: any, options: RequestInit = {}): Promise<T> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string>),
+    }
+
+    return request<T>(path, {
+      ...options,
+      method: 'PUT',
       headers,
       body: JSON.stringify(body),
     })

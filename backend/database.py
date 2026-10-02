@@ -217,11 +217,28 @@ CREATE TABLE IF NOT EXISTS scheduled_tasks (
     parent_task_id INTEGER REFERENCES scheduled_tasks(id),
     alert_1h_sent BOOLEAN DEFAULT FALSE,
     alert_sent_at TIMESTAMP WITH TIME ZONE,
+    manual_status VARCHAR(50) DEFAULT NULL,
+    manual_status_updated_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    manual_status_updated_by INTEGER REFERENCES users(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     created_by INTEGER REFERENCES users(id),
     updated_at TIMESTAMP WITH TIME ZONE,
     updated_by INTEGER REFERENCES users(id)
 );
+
+-- Migration check for manual status columns if scheduled_tasks already exists
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name='scheduled_tasks' AND column_name='manual_status'
+    ) THEN
+        ALTER TABLE scheduled_tasks 
+          ADD COLUMN manual_status VARCHAR(50) DEFAULT NULL,
+          ADD COLUMN manual_status_updated_at TIMESTAMPTZ DEFAULT NULL,
+          ADD COLUMN manual_status_updated_by INTEGER REFERENCES users(id);
+    END IF;
+END $$;
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_cdc ON scheduled_tasks(cdc_number);
@@ -251,18 +268,23 @@ SELECT
     t.parent_task_id,
     t.alert_1h_sent,
     t.alert_sent_at,
+    t.manual_status,
+    t.manual_status_updated_at,
+    t.manual_status_updated_by,
     t.created_at,
     t.created_by,
     t.updated_at,
     t.updated_by,
-    u_creator.full_name AS created_by_name,
-    u_updater.full_name AS updated_by_name,
+    COALESCE(u_creator.full_name, u_creator.username) AS created_by_name,
+    COALESCE(u_updater.full_name, u_updater.username) AS updated_by_name,
+    COALESCE(u_man_up.full_name, u_man_up.username) AS manual_status_updated_by_name,
     CASE
-        WHEN t.end_datetime < (CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') THEN 'TERMINADO'
-        WHEN t.start_datetime <= (CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') 
-             AND t.end_datetime >= (CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') THEN 'EN EJECUCION'
-        WHEN t.start_datetime <= ((CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') + ({Config.ALERT_PREWARNING_MINUTES} * INTERVAL '1 minute'))
-             AND t.start_datetime > (CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') THEN 'PROXIMO (MENOS DE {Config.ALERT_PREWARNING_MINUTES} MINUTOS)'
+        WHEN t.manual_status IS NOT NULL THEN t.manual_status
+        WHEN (CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') >= t.end_datetime THEN 'TERMINADO'
+        WHEN (CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') >= t.start_datetime 
+             AND (CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') < t.end_datetime THEN 'EN EJECUCION'
+        WHEN (CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') >= (t.start_datetime - INTERVAL '{Config.ALERT_PREWARNING_MINUTES} minutes') 
+             AND (CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') < t.start_datetime THEN 'PROXIMO (MENOS DE {Config.ALERT_PREWARNING_MINUTES} MINUTOS)'
         ELSE 'PROGRAMADO'
     END AS execution_status,
     cs.filename AS sheet_filename,
@@ -270,7 +292,8 @@ SELECT
 FROM scheduled_tasks t
 LEFT JOIN committee_sheets cs ON t.sheet_id = cs.id
 LEFT JOIN users u_creator ON t.created_by = u_creator.id
-LEFT JOIN users u_updater ON t.updated_by = u_updater.id;
+LEFT JOIN users u_updater ON t.updated_by = u_updater.id
+LEFT JOIN users u_man_up ON t.manual_status_updated_by = u_man_up.id;
 
 -- 6. Trigger to prevent deletion on scheduled_tasks, committee_sheets, and users
 CREATE OR REPLACE FUNCTION prevent_table_deletion()

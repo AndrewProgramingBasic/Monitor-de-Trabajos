@@ -26,6 +26,7 @@ interface AuthContextType {
     full_name: string
   }) => Promise<User>
   refreshUser: () => Promise<void>
+  updateUser: (updatedUser: User) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -118,6 +119,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [token])
 
+  const updateUser = useCallback((updatedUser: User) => {
+    setUser(updatedUser)
+    if (token) {
+      setStoredSession(token, updatedUser)
+    }
+  }, [token])
+
   return (
     <AuthContext.Provider
       value={{
@@ -129,6 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         registerUser,
         refreshUser,
+        updateUser,
       }}
     >
       {children}

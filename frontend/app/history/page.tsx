@@ -58,6 +58,8 @@ import {
   subscribeToPush,
   unsubscribeFromPush,
 } from '@/lib/push-notifications'
+import { Header } from '@/components/header'
+import { UserProfileModal } from '@/components/user-profile-modal'
 import { LoginView } from '@/components/login-view'
 import { EditScheduleDialog } from '@/components/edit-schedule-dialog'
 import { RegisterUserDialog } from '@/components/register-user-dialog'
@@ -87,6 +89,13 @@ export const getStatusBadgeProps = (status: string) => {
         'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/50 dark:text-emerald-300',
     }
   }
+  if (norm === 'SUSPENDIDO') {
+    return {
+      label: status,
+      className:
+        'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800/60 dark:bg-orange-950/50 dark:text-orange-300 font-semibold',
+    }
+  }
   return {
     label: status || 'PROGRAMADO',
     className:
@@ -101,6 +110,8 @@ const baseStatusStyles: Record<string, string> = {
     'border-red-200 bg-red-50 text-red-700 dark:border-red-800/60 dark:bg-red-950/50 dark:text-red-300 font-semibold',
   TERMINADO:
     'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/50 dark:text-emerald-300',
+  SUSPENDIDO:
+    'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800/60 dark:bg-orange-950/50 dark:text-orange-300 font-semibold',
 }
 
 const statusStyles: Record<string, string> = new Proxy(baseStatusStyles, {
@@ -300,6 +311,21 @@ export default function HistoryPage() {
     }
   }
 
+  // Send a test notification
+  async function handleSendTestPush() {
+    try {
+      await api.post('/push/test', {
+        title: 'ALERTA DE TRABAJO VPTI',
+        body: 'Prueba de notificación push operacional: el servicio está listo.',
+      })
+      toast.success('Notificación de prueba enviada al dispositivo.')
+    } catch (err: any) {
+      toast.error('Error al enviar notificación de prueba', {
+        description: err?.message || 'Verifique que la suscripción esté activa.',
+      })
+    }
+  }
+
   // Clear all filters
   function handleClearFilters() {
     setSelectedSheetId('all')
@@ -384,16 +410,6 @@ export default function HistoryPage() {
     return { total, withAffectation, rescheduled, totalSheets }
   }, [tasks, sheets])
 
-  const initials = useMemo(() => {
-    if (!user?.full_name) return 'VT'
-    return user.full_name
-      .split(' ')
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase()
-  }, [user])
-
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f8f9fa]">
@@ -408,113 +424,16 @@ export default function HistoryPage() {
 
   return (
     <main className="min-h-screen bg-[#f8f9fa] dark:bg-zinc-950 text-[#212529] dark:text-zinc-100">
-      {/* Top Navigation Bar */}
-      <header className="border-b border-[#dee2e6] dark:border-zinc-800 bg-white dark:bg-zinc-900 sticky top-0 z-30 shadow-xs">
-        <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-4 py-3.5 lg:px-8">
-          <div className="flex min-w-0 items-center gap-3 sm:gap-6">
-            <Link href="/" className="flex min-w-0 items-center gap-3 hover:opacity-95 transition-opacity">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#0d6efd] text-white shadow-xs">
-                <ClipboardList className="size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-base font-bold tracking-tight text-slate-900 dark:text-white">VPTI Task Monitor</p>
-                <p className="hidden text-xs text-slate-500 dark:text-slate-400 sm:block">
-                  Comité técnico de infraestructura y telecomunicaciones
-                </p>
-              </div>
-            </Link>
-
-            {/* View Navigation Links */}
-            <nav className="flex items-center gap-1.5 border-l border-slate-200 dark:border-zinc-800 pl-3 sm:pl-5">
-              <Link
-                href="/"
-                className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-zinc-800 transition-colors"
-              >
-                Semana activa
-              </Link>
-              <Link
-                href="/history"
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 shadow-xs"
-              >
-                Histórico general
-              </Link>
-            </nav>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Push Notifications Toggle */}
-            <Button
-              variant="outline"
-              disabled={pushProcessing}
-              className={`hidden sm:flex ${
-                pushEnabled
-                  ? 'border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-700 border border-slate-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-slate-200 dark:border-zinc-700'
-              } font-medium text-xs px-3 py-2 rounded-lg inline-flex items-center gap-2 transition-colors shadow-none`}
-              onClick={handleTogglePush}
-            >
-              {pushProcessing ? (
-                <Loader2 className="size-4 animate-spin" data-icon="inline-start" />
-              ) : pushEnabled ? (
-                <BellRing className="size-4 text-emerald-600 dark:text-emerald-400" data-icon="inline-start" />
-              ) : (
-                <Bell className="size-4" data-icon="inline-start" />
-              )}
-              {pushEnabled ? 'Notificaciones activas' : 'Activar notificaciones'}
-            </Button>
-
-            {/* Register User Button */}
-            <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-3.5 py-2 rounded-lg shadow-sm transition-all inline-flex items-center gap-2"
-              onClick={() => setRegisterUserOpen(true)}
-            >
-              <UserPlus className="size-4" data-icon="inline-start" />
-              <span className="hidden sm:inline">Registrar usuario</span>
-            </Button>
-
-            {/* User Profile Dropdown */}
-            <div className="relative">
-              <Button
-                variant="ghost"
-                className="flex h-auto items-center gap-2 rounded-full px-1.5 py-1 hover:bg-slate-100 dark:hover:bg-zinc-800"
-                aria-expanded={profileOpen}
-                onClick={() => setProfileOpen((prev) => !prev)}
-              >
-                <Avatar className="size-9 border border-[#dee2e6] dark:border-zinc-700">
-                  <AvatarFallback className="bg-blue-50 dark:bg-blue-950/60 text-xs font-bold text-[#0d6efd] dark:text-blue-400">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="hidden text-left lg:block">
-                  <span className="block text-xs font-semibold text-slate-900 dark:text-white">{user?.full_name}</span>
-                  <span className="block text-[10px] text-slate-500 dark:text-slate-400">@{user?.username}</span>
-                </span>
-                <ChevronDown className="hidden size-4 text-slate-400 sm:block" />
-              </Button>
-
-              {profileOpen && (
-                <div className="absolute right-0 top-12 z-40 w-60 rounded-xl border border-[#dee2e6] dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3 shadow-xl">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white">{user?.full_name}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{user?.email}</p>
-                  <p className="mt-1 text-[11px] font-mono text-slate-400 dark:text-slate-500">Usuario: {user?.username}</p>
-                  <Separator className="my-2.5 dark:border-zinc-800" />
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-700 dark:hover:text-red-300"
-                    onClick={() => {
-                      setProfileOpen(false)
-                      logout()
-                    }}
-                  >
-                    <LogOut className="size-3.5 mr-2" />
-                    Cerrar sesión
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Top Navigation Bar with Mobile Hamburger Drawer */}
+      <Header
+        activeTab="history"
+        pushEnabled={pushEnabled}
+        pushProcessing={pushProcessing}
+        onTogglePush={handleTogglePush}
+        onSendTestPush={handleSendTestPush}
+        onOpenRegisterUser={() => setRegisterUserOpen(true)}
+        onOpenProfile={() => setProfileOpen(true)}
+      />
 
       {/* Main Content */}
       <div className="mx-auto max-w-[1600px] px-4 py-6 lg:px-8">
@@ -712,6 +631,7 @@ export default function HistoryPage() {
                     <SelectItem value="PROXIMO">PROXIMO (ALERTAS / PREAVISO)</SelectItem>
                     <SelectItem value="EN EJECUCION">EN EJECUCION</SelectItem>
                     <SelectItem value="TERMINADO">TERMINADO</SelectItem>
+                    <SelectItem value="SUSPENDIDO">SUSPENDIDO</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -962,6 +882,10 @@ export default function HistoryPage() {
         task={selectedTask}
         open={taskDetailOpen}
         onOpenChange={setTaskDetailOpen}
+        onTaskUpdated={(updatedTask) => {
+          setSelectedTask(updatedTask)
+          setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)))
+        }}
         onOpenEditSchedule={(t) => {
           setEditingTask(t)
           setEditScheduleOpen(true)
@@ -983,6 +907,11 @@ export default function HistoryPage() {
       <RegisterUserDialog
         open={registerUserOpen}
         onOpenChange={setRegisterUserOpen}
+      />
+
+      <UserProfileModal
+        open={profileOpen}
+        onOpenChange={setProfileOpen}
       />
     </main>
   )

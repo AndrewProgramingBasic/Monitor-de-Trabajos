@@ -53,6 +53,19 @@ def client_and_token(monkeypatch):
                     if "alert_1h_sent = false" in q:
                         tasks_db[tid]["alert_1h_sent"] = False
                         tasks_db[tid]["alert_sent_at"] = None
+                    if "manual_status = null" in q:
+                        tasks_db[tid]["manual_status"] = None
+                        tasks_db[tid]["execution_status"] = "PROGRAMADO"
+                    elif "manual_status = %s" in q:
+                        for p in self.last_params:
+                            if p in ("SUSPENDIDO", "TERMINADO"):
+                                tasks_db[tid]["manual_status"] = p
+                                tasks_db[tid]["execution_status"] = p
+                    if "cdc_number = %s" in q:
+                        for p in self.last_params:
+                            if isinstance(p, str) and (p.isdigit() or p.startswith("39")):
+                                tasks_db[tid]["cdc_number"] = p
+                                break
                     tasks_db[tid]["updated_at"] = datetime.now()
                     tasks_db[tid]["updated_by"] = int(self.last_params[-2])
 
@@ -105,21 +118,21 @@ def client_and_token(monkeypatch):
                     }
                 return None
 
+            if "select id, cdc_number, manual_status, start_datetime, end_datetime from scheduled_tasks where id = %s" in q:
+                tid = int(self.last_params[0])
+                if tid in tasks_db:
+                    return {
+                        "id": tid,
+                        "cdc_number": tasks_db[tid]["cdc_number"],
+                        "manual_status": tasks_db[tid].get("manual_status"),
+                        "start_datetime": tasks_db[tid]["start_datetime"],
+                        "end_datetime": tasks_db[tid]["end_datetime"],
+                    }
+                return None
+
             if "select * from v_scheduled_tasks where id = %s" in q:
                 tid = int(self.last_params[0])
                 return tasks_db.get(tid)
-
-            if "update scheduled_tasks" in q:
-                tid = int(self.last_params[-1])
-                if tid in tasks_db:
-                    # Check what was updated
-                    if "alert_1h_sent = false" in q:
-                        tasks_db[tid]["alert_1h_sent"] = False
-                        tasks_db[tid]["alert_sent_at"] = None
-                    # Update dates
-                    tasks_db[tid]["updated_at"] = datetime.now()
-                    tasks_db[tid]["updated_by"] = int(self.last_params[-2])
-                return None
 
             return None
 
@@ -208,3 +221,49 @@ def test_forbidden_deletions(client_and_token):
     res = client.delete("/api/tasks/1", headers={"Authorization": f"Bearer {token}"})
     # 405 Method Not Allowed confirms DELETE method is completely disabled
     assert res.status_code == 405
+
+
+def test_put_task_cdc_and_manual_status(client_and_token):
+    client, token = client_and_token
+
+    # 1. Update CDC and set manual_status to SUSPENDIDO
+    res_susp = client.put(
+        "/api/tasks/1",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "cdc_number": "3900099888",
+            "manual_status": "SUSPENDIDO",
+        },
+    )
+    assert res_susp.status_code == 200
+    updated_susp = res_susp.get_json()
+    assert updated_susp["cdc_number"] == "3900099888"
+    assert updated_susp["manual_status"] == "SUSPENDIDO"
+
+    # 2. Transition manual_status to TERMINADO
+    res_term = client.put(
+        "/api/tasks/1",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"manual_status": "TERMINADO"},
+    )
+    assert res_term.status_code == 200
+    assert res_term.get_json()["manual_status"] == "TERMINADO"
+
+    # 3. Reset manual_status to AUTO (automatic calculation)
+    res_auto = client.put(
+        "/api/tasks/1",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"manual_status": "AUTO"},
+    )
+    assert res_auto.status_code == 200
+    assert res_auto.get_json()["manual_status"] is None
+
+    # 4. Reject invalid manual_status
+    res_inv = client.put(
+        "/api/tasks/1",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"manual_status": "ESTADO_INEXISTENTE"},
+    )
+    assert res_inv.status_code == 400
+    assert "Estado manual inválido" in res_inv.get_json()["error"]
+

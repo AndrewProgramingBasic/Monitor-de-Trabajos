@@ -31,6 +31,7 @@ def get_pending_1h_alerts():
         SELECT id, title, cdc_number, start_datetime, end_datetime
         FROM scheduled_tasks
         WHERE (alert_1h_sent IS FALSE OR alert_1h_sent IS NULL)
+          AND (manual_status IS NULL OR manual_status NOT IN ('SUSPENDIDO', 'TERMINADO'))
           AND start_datetime >= %s
           AND start_datetime <= %s
         ORDER BY start_datetime ASC;
