@@ -738,33 +738,6 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Floating Push Notifications Widget (Bottom Right) */}
-      <div className="fixed bottom-4 right-4 hidden max-w-sm items-center gap-3 rounded-xl border border-[#dee2e6] dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3.5 shadow-lg sm:flex z-20">
-        <div
-          className={`flex size-9 items-center justify-center rounded-full ${
-            pushEnabled
-              ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
-              : 'bg-blue-50 dark:bg-blue-950/60 text-[#0d6efd] dark:text-blue-400'
-          }`}
-        >
-          {pushEnabled ? <BellRing className="size-4" /> : <Bell className="size-4" />}
-        </div>
-        <div className="flex-1 pr-2">
-          <p className="text-xs font-semibold text-slate-900 dark:text-white">
-            {pushEnabled ? 'Alertas push activadas' : 'Alertas operativas VPTI'}
-          </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-300 leading-tight">
-            {pushEnabled
-              ? 'Te avisaremos 1 hora antes de cada inicio de trabajo.'
-              : 'Activa Web Push para recibir alertas en este equipo.'}
-          </p>
-        </div>
-        <Switch
-          checked={pushEnabled}
-          disabled={pushProcessing}
-          onCheckedChange={handleTogglePush}
-        />
-      </div>
 
       {/* Modals */}
       <TaskDetailDialog
