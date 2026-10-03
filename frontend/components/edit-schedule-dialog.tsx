@@ -152,7 +152,7 @@ export function EditScheduleDialog({
                 id="start-datetime"
                 type="datetime-local"
                 value={startDatetime}
-                onChange={(e) => setStartDatetime(e.target.value)}
+                onChange={(e) => setStartDatetime(e.target.value ? new Date(new Date(e.target.value).getTime() - 14400000).toISOString().slice(0, 16) : '')}
                 required
                 disabled={loading}
                 className="h-10 text-xs border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
@@ -169,7 +169,7 @@ export function EditScheduleDialog({
                 id="end-datetime"
                 type="datetime-local"
                 value={endDatetime}
-                onChange={(e) => setEndDatetime(e.target.value)}
+                onChange={(e) => setEndDatetime(e.target.value ? new Date(new Date(e.target.value).getTime() - 14400000).toISOString().slice(0, 16) : '')}
                 required
                 disabled={loading}
                 className="h-10 text-xs border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
