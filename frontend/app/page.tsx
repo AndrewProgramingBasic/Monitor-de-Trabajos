@@ -63,6 +63,7 @@ import { EditScheduleDialog } from '@/components/edit-schedule-dialog'
 import { RegisterUserDialog } from '@/components/register-user-dialog'
 import { NewTaskDialog } from '@/components/new-task-dialog'
 import { TaskDetailDialog } from '@/components/task-detail-dialog'
+import { TaskFilters } from '@/components/task-filters'
 import { toast } from 'sonner'
 
 export { LoginView }
@@ -510,91 +511,33 @@ export default function DashboardPage() {
         {/* Tasks Table Card */}
         <Card className="border-[#dee2e6] dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden">
           <CardHeader className="border-b border-[#dee2e6] dark:border-zinc-800 pb-4">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-              <div>
-                <CardTitle className="text-base font-bold text-slate-900 dark:text-white">Tareas programadas</CardTitle>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
-                  {tasks.length} registros encontrados
-                  {loadingTasks && ' (actualizando...)'}
-                </p>
-              </div>
-
-              {/* Search Bar */}
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 size-4 text-slate-400" />
-                  <Input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Buscar por título o CDC..."
-                    className="w-full pl-9 sm:w-72 h-9 text-xs border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Filter Controls */}
-            <div className="grid gap-3 pt-4 sm:grid-cols-2 xl:grid-cols-4">
-              <div>
-                <Label className="mb-1.5 block text-xs text-slate-500 dark:text-slate-300">Filtrar por Estado</Label>
-                <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val || 'all')}>
-                  <SelectTrigger className="h-9 text-xs border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los estados</SelectItem>
-                    <SelectItem value="PROGRAMADO">PROGRAMADO</SelectItem>
-                    <SelectItem value="PROXIMO">PROXIMO (ALERTAS / PREAVISO)</SelectItem>
-                    <SelectItem value="EN EJECUCION">EN EJECUCION</SelectItem>
-                    <SelectItem value="TERMINADO">TERMINADO</SelectItem>
-                    <SelectItem value="SUSPENDIDO">SUSPENDIDO</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label className="mb-1.5 block text-xs text-slate-500 dark:text-slate-300">Filtrar por Afectación</Label>
-                <Select value={affectationFilter} onValueChange={(val) => setAffectationFilter(val || 'all')}>
-                  <SelectTrigger className="h-9 text-xs border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas las afectaciones</SelectItem>
-                    <SelectItem value="SI">SI - Con afectación</SelectItem>
-                    <SelectItem value="NO">NO - Sin afectación</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-end">
-                <div className="flex h-9 w-full items-center justify-between rounded-md border border-[#dee2e6] dark:border-zinc-700 px-3 bg-white dark:bg-zinc-800 text-slate-700 dark:text-slate-200">
-                  <Label htmlFor="rescheduled-toggle" className="text-xs font-medium cursor-pointer">
-                    Solo reprogramaciones
-                  </Label>
-                  <Switch
-                    id="rescheduled-toggle"
-                    checked={rescheduledFilter}
-                    onCheckedChange={setRescheduledFilter}
-                  />
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base font-bold text-slate-900 dark:text-white">Tareas programadas</CardTitle>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
+                    {tasks.length} registros encontrados
+                    {loadingTasks && ' (actualizando...)'}
+                  </p>
                 </div>
               </div>
 
-              <div className="flex items-end">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 w-full text-xs text-slate-600 dark:text-slate-300 border border-dashed border-slate-300 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800"
-                  onClick={() => {
-                    setStatusFilter('all')
-                    setAffectationFilter('all')
-                    setRescheduledFilter(false)
-                    setSearch('')
-                  }}
-                >
-                  Restablecer filtros
-                </Button>
-              </div>
+              <TaskFilters
+                search={search}
+                onSearchChange={setSearch}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                affectationFilter={affectationFilter}
+                onAffectationFilterChange={setAffectationFilter}
+                rescheduledFilter={rescheduledFilter}
+                onRescheduledFilterChange={setRescheduledFilter}
+                onResetFilters={() => {
+                  setStatusFilter('all')
+                  setAffectationFilter('all')
+                  setRescheduledFilter(false)
+                  setSearch('')
+                }}
+              />
             </div>
           </CardHeader>
 
@@ -659,9 +602,9 @@ export default function DashboardPage() {
                                 </p>
                               </div>
                               {task.is_rescheduled && (
-                                <Badge className="shrink-0 border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/50 text-[10px] text-amber-700 dark:text-amber-300">
-                                  REPROGRAMACIÓN
-                                </Badge>
+                                <span className="shrink-0 px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                                  🔄 Reprogramado
+                                </span>
                               )}
                             </div>
                           </TableCell>
@@ -750,9 +693,9 @@ export default function DashboardPage() {
                               CDC {task.cdc_number || 'S/N'}
                             </span>
                             {task.is_rescheduled && (
-                              <Badge className="border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/50 text-[9px] text-amber-700 dark:text-amber-300 px-1 py-0">
-                                REPROGRAMADA
-                              </Badge>
+                              <span className="shrink-0 px-2 py-0.5 text-[11px] font-semibold rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                                🔄 Reprogramado
+                              </span>
                             )}
                           </div>
                         </div>

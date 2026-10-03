@@ -205,7 +205,14 @@ def create_manual_task():
 
     with get_db_cursor(commit=True) as cur:
         # Check rescheduling
-        is_resched, parent_id = check_rescheduled(cur, cdc_number, {})
+        if "is_rescheduled" in data and data.get("is_rescheduled") is not None:
+            is_resched = bool(data["is_rescheduled"])
+            if is_resched and cdc_number:
+                _, parent_id = check_rescheduled(cur, cdc_number, {})
+            else:
+                parent_id = None
+        else:
+            is_resched, parent_id = check_rescheduled(cur, cdc_number, {})
 
         # Compute next sheet_item_order
         cur.execute("SELECT COALESCE(MAX(sheet_item_order), 0) + 1 AS next_order FROM scheduled_tasks;")
@@ -424,7 +431,7 @@ def update_task(task_id: int):
     # Retrieve existing task
     with get_db_cursor(commit=False) as cur:
         cur.execute(
-            "SELECT id, cdc_number, manual_status, start_datetime, end_datetime FROM scheduled_tasks WHERE id = %s;",
+            "SELECT id, cdc_number, is_rescheduled, parent_task_id, manual_status, start_datetime, end_datetime FROM scheduled_tasks WHERE id = %s;",
             (task_id,),
         )
         existing = cur.fetchone()
@@ -435,7 +442,18 @@ def update_task(task_id: int):
     update_fields = []
     params = []
 
-    # 1. cdc_number update
+    # 1. is_rescheduled manual override
+    manual_resched = None
+    if "is_rescheduled" in data and data.get("is_rescheduled") is not None:
+        manual_resched = bool(data["is_rescheduled"])
+        update_fields.append("is_rescheduled = %s")
+        params.append(manual_resched)
+        if not manual_resched:
+            update_fields.append("parent_task_id = NULL")
+
+    # 2. cdc_number update
+    cdc_changed = False
+    cleaned_cdc = existing.get("cdc_number")
     if "cdc_number" in data:
         raw_cdc = data.get("cdc_number")
         if raw_cdc is None:
@@ -450,6 +468,32 @@ def update_task(task_id: int):
 
         update_fields.append("cdc_number = %s")
         params.append(cleaned_cdc)
+        cdc_changed = True
+
+    # Automatic rescheduling detection / parent task linkage
+    if manual_resched is True:
+        target_cdc = cleaned_cdc if cdc_changed else existing.get("cdc_number")
+        if target_cdc:
+            with get_db_cursor(commit=False) as check_cur:
+                _, parent_id = check_rescheduled(
+                    check_cur, target_cdc, {}, exclude_task_id=task_id
+                )
+                if parent_id:
+                    update_fields.append("parent_task_id = %s")
+                    params.append(parent_id)
+    elif manual_resched is None and cdc_changed:
+        if cleaned_cdc:
+            with get_db_cursor(commit=False) as check_cur:
+                is_resched, parent_id = check_rescheduled(
+                    check_cur, cleaned_cdc, {}, exclude_task_id=task_id
+                )
+                update_fields.append("is_rescheduled = %s")
+                params.append(is_resched)
+                update_fields.append("parent_task_id = %s")
+                params.append(parent_id)
+        else:
+            update_fields.append("is_rescheduled = FALSE")
+            update_fields.append("parent_task_id = NULL")
 
     # 2. manual_status update
     if "manual_status" in data:

@@ -53,28 +53,46 @@ def client_and_token(monkeypatch):
                     if "alert_1h_sent = false" in q:
                         tasks_db[tid]["alert_1h_sent"] = False
                         tasks_db[tid]["alert_sent_at"] = None
-                    if "manual_status = null" in q:
-                        tasks_db[tid]["manual_status"] = None
-                        tasks_db[tid]["execution_status"] = "PROGRAMADO"
-                    elif "manual_status = %s" in q:
-                        for p in self.last_params:
-                            if p in ("SUSPENDIDO", "TERMINADO"):
-                                tasks_db[tid]["manual_status"] = p
-                                tasks_db[tid]["execution_status"] = p
-                    if "cdc_number = %s" in q:
-                        for p in self.last_params:
-                            if isinstance(p, str) and (p.isdigit() or p.startswith("39")):
-                                tasks_db[tid]["cdc_number"] = p
-                                break
+                    set_parts = [part.strip() for part in q.split("set")[1].split("where")[0].split(",")]
+                    p_idx = 0
+                    for part in set_parts:
+                        col = part.split("=")[0].strip()
+                        if "%s" in part:
+                            val = self.last_params[p_idx]
+                            p_idx += 1
+                            if col == "parent_task_id":
+                                tasks_db[tid]["parent_task_id"] = val
+                            elif col == "is_rescheduled":
+                                tasks_db[tid]["is_rescheduled"] = val
+                            elif col == "cdc_number":
+                                tasks_db[tid]["cdc_number"] = val
+                            elif col == "manual_status":
+                                tasks_db[tid]["manual_status"] = val
+                                tasks_db[tid]["execution_status"] = val or "PROGRAMADO"
+                            elif col == "updated_by":
+                                tasks_db[tid]["updated_by"] = val
+                        elif "null" in part:
+                            if col == "parent_task_id":
+                                tasks_db[tid]["parent_task_id"] = None
+                            elif col == "manual_status":
+                                tasks_db[tid]["manual_status"] = None
+                                tasks_db[tid]["execution_status"] = "PROGRAMADO"
                     tasks_db[tid]["updated_at"] = datetime.now()
-                    tasks_db[tid]["updated_by"] = int(self.last_params[-2])
 
         def fetchone(self):
             q = self.last_query.lower()
             if "select coalesce(max(sheet_item_order)" in q:
                 return {"coalesce": len(tasks_db)}
             if "select id from scheduled_tasks" in q:
-                return None  # No matching cdc for parent
+                # If searching for cdc match
+                target_cdc = self.last_params[0] if self.last_params else None
+                exclude_id = self.last_params[-1] if len(self.last_params) > 3 else None
+                for t_id, t_row in tasks_db.items():
+                    if exclude_id and t_id == exclude_id:
+                        continue
+                    if t_row.get("cdc_number") and target_cdc and t_row["cdc_number"] == target_cdc:
+                        return {"id": t_id}
+                return None
             if "insert into scheduled_tasks" in q:
                 new_id = len(tasks_db) + 1
                 row = {
@@ -118,12 +136,14 @@ def client_and_token(monkeypatch):
                     }
                 return None
 
-            if "select id, cdc_number, manual_status, start_datetime, end_datetime from scheduled_tasks where id = %s" in q:
+            if "select id, cdc_number," in q and "from scheduled_tasks where id = %s" in q:
                 tid = int(self.last_params[0])
                 if tid in tasks_db:
                     return {
                         "id": tid,
                         "cdc_number": tasks_db[tid]["cdc_number"],
+                        "is_rescheduled": tasks_db[tid].get("is_rescheduled", False),
+                        "parent_task_id": tasks_db[tid].get("parent_task_id"),
                         "manual_status": tasks_db[tid].get("manual_status"),
                         "start_datetime": tasks_db[tid]["start_datetime"],
                         "end_datetime": tasks_db[tid]["end_datetime"],
@@ -266,4 +286,45 @@ def test_put_task_cdc_and_manual_status(client_and_token):
     )
     assert res_inv.status_code == 400
     assert "Estado manual inválido" in res_inv.get_json()["error"]
+
+
+def test_task_rescheduling_manual_and_autodetection(client_and_token):
+    client, token = client_and_token
+
+    # 1. Create a second task with the same CDC number (3900092507).
+    # It should automatically be detected as rescheduled linking to task #1.
+    res_create = client.post(
+        "/api/tasks",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "title": "Segunda ventana de switches",
+            "cdc_number": "3900092507",
+            "start_datetime": "2026-09-30 14:00",
+            "end_datetime": "2026-09-30 16:00",
+        },
+    )
+    assert res_create.status_code == 201
+    created_task = res_create.get_json()
+    assert created_task["is_rescheduled"] is True
+    assert created_task["parent_task_id"] == 1
+
+    # 2. Manually override is_rescheduled to False via PUT
+    res_override_false = client.put(
+        f"/api/tasks/{created_task['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"is_rescheduled": False},
+    )
+    assert res_override_false.status_code == 200
+    assert res_override_false.get_json()["is_rescheduled"] is False
+
+    # 3. Manually override is_rescheduled to True via PUT
+    res_override_true = client.put(
+        f"/api/tasks/{created_task['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"is_rescheduled": True},
+    )
+    assert res_override_true.status_code == 200
+    assert res_override_true.get_json()["is_rescheduled"] is True
+    assert res_override_true.get_json()["parent_task_id"] == 1
+
 

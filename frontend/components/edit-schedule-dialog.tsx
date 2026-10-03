@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { CalendarClock, Loader2, AlertCircle, Clock } from 'lucide-react'
 import { api, ScheduledTask } from '@/lib/api'
 import { toast } from 'sonner'
@@ -48,6 +49,7 @@ export function EditScheduleDialog({
 }: EditScheduleDialogProps) {
   const [startDatetime, setStartDatetime] = useState('')
   const [endDatetime, setEndDatetime] = useState('')
+  const [isRescheduled, setIsRescheduled] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
@@ -55,6 +57,7 @@ export function EditScheduleDialog({
     if (task && open) {
       setStartDatetime(toLocalDatetimeString(task.start_datetime))
       setEndDatetime(toLocalDatetimeString(task.end_datetime))
+      setIsRescheduled(Boolean(task.is_rescheduled))
       setErrorMsg(null)
     }
   }, [task, open])
@@ -91,9 +94,10 @@ async function handleSubmit(e: React.FormEvent) {
       const payload = {
         start_datetime: new Date(startDate.getTime() - FOUR_HOURS_MS).toISOString(),
         end_datetime: new Date(endDate.getTime() - FOUR_HOURS_MS).toISOString(),
+        is_rescheduled: isRescheduled,
       }
 
-      const updated = await api.patch<ScheduledTask>(`/tasks/${task.id}`, payload)
+      const updated = await api.put<ScheduledTask>(`/tasks/${task.id}`, payload)
 
       toast.success('Horario de tarea actualizado', {
         description: `Se reprogramó la ventana para la tarea CDC ${task.cdc_number || task.id}`,
@@ -175,6 +179,23 @@ async function handleSubmit(e: React.FormEvent) {
                 className="h-10 text-xs border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
               />
             </div>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-3 shadow-xs">
+            <div className="space-y-0.5">
+              <Label htmlFor="edit-reschedule-toggle" className="text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
+                Marcar como Reprogramación
+              </Label>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Identificar explícitamente esta ventana como reprogramada
+              </p>
+            </div>
+            <Switch
+              id="edit-reschedule-toggle"
+              checked={isRescheduled}
+              onCheckedChange={setIsRescheduled}
+              disabled={loading}
+            />
           </div>
 
           <div className="rounded-lg bg-amber-50 dark:bg-amber-950/50 p-2.5 text-[11px] leading-relaxed text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">

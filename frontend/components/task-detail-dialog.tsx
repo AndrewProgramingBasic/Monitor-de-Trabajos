@@ -20,6 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { api, ScheduledTask } from '@/lib/api'
 import { toast } from 'sonner'
 import {
@@ -63,6 +65,9 @@ export function TaskDetailDialog({
   // Manual Status state
   const [statusSelection, setStatusSelection] = useState<string>('AUTO')
   const [savingStatus, setSavingStatus] = useState(false)
+
+  // Rescheduled flag state
+  const [savingRescheduled, setSavingRescheduled] = useState(false)
 
   useEffect(() => {
     if (task) {
@@ -131,6 +136,34 @@ export function TaskDetailDialog({
     }
   }
 
+  // Handler for toggling Rescheduled flag manually
+  async function handleToggleRescheduled(checked: boolean) {
+    setSavingRescheduled(true)
+    try {
+      const updated = await api.put<ScheduledTask>(`/tasks/${currentTask!.id}`, {
+        is_rescheduled: checked,
+      })
+      setCurrentTask(updated)
+      toast.success(
+        checked
+          ? 'Tarea marcada como Reprogramación'
+          : 'Marca de reprogramación eliminada',
+        {
+          description: checked
+            ? 'Esta tarea ha sido catalogada como reprogramación de ventana previa.'
+            : 'Se retiró la marca de reprogramación.',
+        }
+      )
+      onTaskUpdated?.(updated)
+    } catch (err: any) {
+      toast.error('Error al actualizar reprogramación', {
+        description: err?.message || 'No se pudo cambiar el estado de reprogramación.',
+      })
+    } finally {
+      setSavingRescheduled(false)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-xl p-6 text-slate-900 dark:text-slate-100 max-h-[90vh] overflow-y-auto">
@@ -156,9 +189,9 @@ export function TaskDetailDialog({
                 </Badge>
               )}
               {currentTask.is_rescheduled && (
-                <Badge className="border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300">
-                  REPROGRAMACIÓN
-                </Badge>
+                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                  🔄 Reprogramado
+                </span>
               )}
               {currentTask.has_affectation === 'SI' ? (
                 <Badge
@@ -309,6 +342,27 @@ export function TaskDetailDialog({
                 </span>
               </div>
             )}
+
+            {/* Manual Rescheduling Toggle */}
+            <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/50 p-3 mt-3">
+              <div className="space-y-0.5">
+                <Label
+                  htmlFor="manual-reschedule-toggle"
+                  className="text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer"
+                >
+                  Marcar como Reprogramación
+                </Label>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Indica si esta tarea reemplaza o reprograma una ventana técnica anterior.
+                </p>
+              </div>
+              <Switch
+                id="manual-reschedule-toggle"
+                checked={Boolean(currentTask.is_rescheduled)}
+                onCheckedChange={handleToggleRescheduled}
+                disabled={savingRescheduled}
+              />
+            </div>
           </div>
 
           {/* Schedule Window */}

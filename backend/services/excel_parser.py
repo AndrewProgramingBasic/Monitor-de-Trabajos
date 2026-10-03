@@ -336,41 +336,88 @@ def clean_cdc_number(val: Any) -> str | None:
 
 
 def check_rescheduled(
-    cursor, cdc_number: str | None, current_batch_cdcs: dict[str, int]
+    cursor,
+    cdc_number: str | None,
+    current_batch_cdcs: dict[str, int],
+    exclude_task_id: int | None = None,
 ) -> tuple[bool, int | None]:
     """
     Checks if a task is rescheduled:
     - CDC string contains 'R/P' (case-insensitive) OR
     - Clean CDC value already exists in table scheduled_tasks or earlier in the current batch.
+    Ignores NULL, empty, or 'S/N' CDC numbers.
     Returns (is_rescheduled, parent_task_id).
     """
     if not cdc_number:
         return False, None
 
-    has_rp = "r/p" in cdc_number.lower()
-    base_cdc = re.sub(r"(?i)R\s*/\s*P\s*", "", cdc_number).strip()
+    cdc_clean = str(cdc_number).strip()
+    if not cdc_clean or cdc_clean.upper() in (
+        "S/N",
+        "SN",
+        "SIN NUMERO",
+        "SIN NÚMERO",
+        "N/A",
+        "NA",
+        "-",
+        "NONE",
+        "NULL",
+    ):
+        return False, None
+
+    has_rp = "r/p" in cdc_clean.lower()
+    base_cdc = re.sub(r"(?i)R\s*/\s*P\s*", "", cdc_clean).strip()
+
+    if not base_cdc or base_cdc.upper() in (
+        "S/N",
+        "SN",
+        "SIN NUMERO",
+        "SIN NÚMERO",
+        "N/A",
+        "NA",
+        "-",
+        "NONE",
+        "NULL",
+    ):
+        return (True, None) if has_rp else (False, None)
 
     # 1. Check if seen earlier in current ingestion batch
     if base_cdc in current_batch_cdcs:
         return True, current_batch_cdcs[base_cdc]
-    if cdc_number in current_batch_cdcs:
-        return True, current_batch_cdcs[cdc_number]
+    if cdc_clean in current_batch_cdcs:
+        return True, current_batch_cdcs[cdc_clean]
 
     # 2. Check in database for existing records (if cursor is available)
     if cursor is not None:
         try:
-            query = """
-                SELECT id FROM scheduled_tasks 
-                WHERE cdc_number = %s 
-                   OR cdc_number ILIKE %s
-                   OR cdc_number = %s
-                ORDER BY created_at ASC, id ASC 
-                LIMIT 1;
-            """
-            cursor.execute(query, (base_cdc, f"%{base_cdc}%", cdc_number))
+            if exclude_task_id:
+                query = """
+                    SELECT id FROM scheduled_tasks 
+                    WHERE (cdc_number = %s 
+                       OR cdc_number ILIKE %s
+                       OR cdc_number = %s)
+                      AND id != %s
+                    ORDER BY created_at ASC, id ASC 
+                    LIMIT 1;
+                """
+                cursor.execute(
+                    query, (base_cdc, f"%{base_cdc}%", cdc_clean, exclude_task_id)
+                )
+            else:
+                query = """
+                    SELECT id FROM scheduled_tasks 
+                    WHERE cdc_number = %s 
+                       OR cdc_number ILIKE %s
+                       OR cdc_number = %s
+                    ORDER BY created_at ASC, id ASC 
+                    LIMIT 1;
+                """
+                cursor.execute(query, (base_cdc, f"%{base_cdc}%", cdc_clean))
+
             match = cursor.fetchone()
             if match:
-                return True, match[0]
+                parent_id = match["id"] if isinstance(match, dict) else match[0]
+                return True, parent_id
         except Exception as exc:
             logger.warning("Could not query scheduled_tasks for rescheduling: %s", exc)
 

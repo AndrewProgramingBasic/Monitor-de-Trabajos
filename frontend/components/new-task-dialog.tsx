@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import { PlusCircle, Loader2, AlertCircle } from 'lucide-react'
 import { api, ScheduledTask } from '@/lib/api'
 import { toast } from 'sonner'
@@ -37,6 +38,7 @@ export function NewTaskDialog({
   const [endDatetime, setEndDatetime] = useState('')
   const [hasAffectation, setHasAffectation] = useState('NO')
   const [justification, setJustification] = useState('')
+  const [isRescheduled, setIsRescheduled] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
@@ -47,6 +49,7 @@ export function NewTaskDialog({
     setEndDatetime('')
     setHasAffectation('NO')
     setJustification('')
+    setIsRescheduled(false)
     setErrorMsg(null)
   }
 
@@ -84,6 +87,7 @@ async function handleSubmit(e: React.FormEvent) {
       end_datetime: new Date(endDate.getTime() - FOUR_HOURS_MS).toISOString(),
       has_affectation: hasAffectation,
       justification: justification.trim() || null,
+      is_rescheduled: isRescheduled,
       sheet_id: activeSheetId || undefined,
     }
 
@@ -215,6 +219,23 @@ async function handleSubmit(e: React.FormEvent) {
               placeholder="Explica el motivo y alcance de la actividad técnica..."
               disabled={loading}
               className="mt-1.5 text-xs min-h-[70px] border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400"
+            />
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-3 shadow-xs">
+            <div className="space-y-0.5">
+              <Label htmlFor="new-reschedule-toggle" className="text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
+                Marcar como Reprogramación
+              </Label>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Identificar explícitamente esta tarea como reprogramación de una ventana técnica anterior
+              </p>
+            </div>
+            <Switch
+              id="new-reschedule-toggle"
+              checked={isRescheduled}
+              onCheckedChange={setIsRescheduled}
+              disabled={loading}
             />
           </div>
 

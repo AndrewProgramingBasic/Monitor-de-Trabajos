@@ -64,6 +64,7 @@ import { LoginView } from '@/components/login-view'
 import { EditScheduleDialog } from '@/components/edit-schedule-dialog'
 import { RegisterUserDialog } from '@/components/register-user-dialog'
 import { TaskDetailDialog } from '@/components/task-detail-dialog'
+import { TaskFilters } from '@/components/task-filters'
 import { toast } from 'sonner'
 
 export const getStatusBadgeProps = (status: string) => {
@@ -556,151 +557,32 @@ export default function HistoryPage() {
         {/* Enhanced Filter Panel */}
         <Card className="mb-6 border-[#dee2e6] dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs">
           <CardContent className="p-4 sm:p-5">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-zinc-800 pb-3">
+            <div className="mb-3 flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-2.5">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                 <Filter className="size-4 text-[#0d6efd]" />
                 Filtros avanzados de auditoría
               </div>
-              {(selectedSheetId !== 'all' ||
-                statusFilter !== 'all' ||
-                affectationFilter !== 'all' ||
-                rescheduledFilter ||
-                search) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClearFilters}
-                  className="h-7 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white px-2 rounded-lg"
-                >
-                  <X className="size-3.5 mr-1" />
-                  Limpiar filtros
-                </Button>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {/* Filter 1: Committee Sheet Selector */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Matriz / Hoja de Comité
-                </Label>
-                <Select
-                  value={selectedSheetId}
-                  onValueChange={(val) => setSelectedSheetId(val || 'all')}
-                  disabled={loadingSheets}
-                >
-                  <SelectTrigger className="w-full bg-white dark:bg-zinc-800 border-slate-300 dark:border-zinc-700 text-xs rounded-xl shadow-xs">
-                    <SelectValue placeholder="Todas las matrices" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    <SelectItem value="all">Todas las matrices ({sheets.length})</SelectItem>
-                    {sheets.map((s) => (
-                      <SelectItem key={s.id} value={String(s.id)}>
-                        <div className="flex items-center gap-2">
-                          <span>{s.committee_name || s.filename}</span>
-                          <span className="text-[11px] text-slate-400">
-                            ({formatDateOnly(s.uploaded_at)})
-                          </span>
-                          {s.is_latest && (
-                            <span className="rounded bg-blue-100 dark:bg-blue-950 px-1.5 py-0.2 text-[10px] font-bold text-blue-700 dark:text-blue-300">
-                              Activa
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Filter 2: Execution Status */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Estado de Ejecución
-                </Label>
-                <Select
-                  value={statusFilter}
-                  onValueChange={(val) => setStatusFilter(val || 'all')}
-                >
-                  <SelectTrigger className="w-full bg-white dark:bg-zinc-800 border-slate-300 dark:border-zinc-700 text-xs rounded-xl shadow-xs">
-                    <SelectValue placeholder="Todos los estados" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los estados</SelectItem>
-                    <SelectItem value="PROGRAMADO">PROGRAMADO</SelectItem>
-                    <SelectItem value="PROXIMO">PROXIMO (ALERTAS / PREAVISO)</SelectItem>
-                    <SelectItem value="EN EJECUCION">EN EJECUCION</SelectItem>
-                    <SelectItem value="TERMINADO">TERMINADO</SelectItem>
-                    <SelectItem value="SUSPENDIDO">SUSPENDIDO</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Filter 3: Affectation */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Afectación de Servicio
-                </Label>
-                <Select
-                  value={affectationFilter}
-                  onValueChange={(val) => setAffectationFilter(val || 'all')}
-                >
-                  <SelectTrigger className="w-full bg-white dark:bg-zinc-800 border-slate-300 dark:border-zinc-700 text-xs rounded-xl shadow-xs">
-                    <SelectValue placeholder="Todas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    <SelectItem value="SI">Con afectación (SI)</SelectItem>
-                    <SelectItem value="NO">Sin afectación (NO)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Filter 4: Text Search */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Buscar por Título o CDC
-                </Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 size-4 text-slate-400" />
-                  <Input
-                    placeholder="Ej. Switch, 39000925..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9 bg-white dark:bg-zinc-800 border-slate-300 dark:border-zinc-700 text-xs rounded-xl shadow-xs"
-                  />
-                  {search && (
-                    <button
-                      onClick={() => setSearch('')}
-                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                    >
-                      <X className="size-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Filter 5: Rescheduled Switch Toggle */}
-            <div className="mt-4 flex items-center justify-between pt-3 border-t border-slate-100 dark:border-zinc-800">
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="rescheduled-toggle"
-                  checked={rescheduledFilter}
-                  onCheckedChange={setRescheduledFilter}
-                />
-                <Label
-                  htmlFor="rescheduled-toggle"
-                  className="cursor-pointer text-xs font-medium text-slate-700 dark:text-slate-300"
-                >
-                  Filtrar únicamente tareas reprogramadas (CDC con duplicidad histórica)
-                </Label>
-              </div>
-
               <div className="text-xs text-slate-500 dark:text-slate-400">
-                Mostrando <span className="font-bold text-slate-800 dark:text-white">{tasks.length}</span> tareas encontradas
+                Mostrando <span className="font-bold text-slate-800 dark:text-white">{tasks.length}</span> tareas
               </div>
             </div>
+
+            <TaskFilters
+              search={search}
+              onSearchChange={setSearch}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              affectationFilter={affectationFilter}
+              onAffectationFilterChange={setAffectationFilter}
+              rescheduledFilter={rescheduledFilter}
+              onRescheduledFilterChange={setRescheduledFilter}
+              onResetFilters={handleClearFilters}
+              sheets={sheets}
+              selectedSheetId={selectedSheetId}
+              onSheetIdChange={setSelectedSheetId}
+              loadingSheets={loadingSheets}
+              formatDateOnly={formatDateOnly}
+            />
           </CardContent>
         </Card>
 
@@ -769,8 +651,8 @@ export default function HistoryPage() {
                             {task.title}
                           </span>
                           {task.is_rescheduled && (
-                            <span className="inline-flex w-fit items-center rounded-sm bg-purple-100 dark:bg-purple-950/60 px-1.5 py-0.5 text-[10px] font-bold text-purple-700 dark:text-purple-300">
-                              REPROGRAMADA
+                            <span className="inline-flex w-fit items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                              🔄 Reprogramado
                             </span>
                           )}
                         </div>
@@ -839,9 +721,18 @@ export default function HistoryPage() {
               tasks.map((task) => (
                 <div key={task.id} className="p-4 space-y-2">
                   <div className="flex items-start justify-between gap-2">
-                    <span className="text-xs font-bold text-slate-900 dark:text-white line-clamp-2">
-                      {task.title}
-                    </span>
+                    <div>
+                      <span className="text-xs font-bold text-slate-900 dark:text-white line-clamp-2">
+                        {task.title}
+                      </span>
+                      {task.is_rescheduled && (
+                        <div className="mt-1">
+                          <span className="inline-flex w-fit items-center px-2 py-0.5 text-[11px] font-semibold rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                            🔄 Reprogramado
+                          </span>
+                        </div>
+                      )}
+                    </div>
                     <Badge
                       variant="outline"
                       className={`text-[10px] shrink-0 ${statusStyles[task.execution_status] || ''}`}
