@@ -632,9 +632,9 @@ export default function DashboardPage() {
                         <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">Tarea / CDC</TableHead>
                         <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">Inicio</TableHead>
                         <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">Fin</TableHead>
+                        <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">Estado</TableHead>
                         <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">Afectación</TableHead>
                         <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">Aprobaciones</TableHead>
-                        <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">Estado</TableHead>
                         <TableHead className="pr-6 text-right text-slate-700 dark:text-slate-300 font-semibold">Acción</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -685,6 +685,14 @@ export default function DashboardPage() {
                           <TableCell>
                             <Badge
                               variant="outline"
+                              className={getStatusBadgeProps(task.execution_status).className}
+                            >
+                              {getStatusBadgeProps(task.execution_status).label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
                               className={
                                 task.has_affectation === 'SI'
                                   ? 'border-red-200 dark:border-red-800/60 bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300'
@@ -703,14 +711,6 @@ export default function DashboardPage() {
                                 Gerencia: <strong className="text-slate-800 dark:text-slate-200">{task.managers_approval || 'S/D'}</strong>
                               </span>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={getStatusBadgeProps(task.execution_status).className}
-                            >
-                              {getStatusBadgeProps(task.execution_status).label}
-                            </Badge>
                           </TableCell>
                           <TableCell className="pr-6 text-right">
                             <Button
