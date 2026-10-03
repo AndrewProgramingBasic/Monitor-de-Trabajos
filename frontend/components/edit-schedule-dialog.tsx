@@ -59,7 +59,7 @@ export function EditScheduleDialog({
     }
   }, [task, open])
 
-  async function handleSubmit(e: React.FormEvent) {
+async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!task) return
 
@@ -85,11 +85,12 @@ export function EditScheduleDialog({
     setErrorMsg(null)
 
     try {
-      // Format as ISO 8601 strings.
-      // Strict scope requirement: payload contains ONLY start_datetime and end_datetime.
+      // 4 horas en milisegundos (4 * 60 * 60 * 1000)
+      const FOUR_HOURS_MS = 14_400_000
+
       const payload = {
-        start_datetime: startDate.toISOString(),
-        end_datetime: endDate.toISOString(),
+        start_datetime: new Date(startDate.getTime() - FOUR_HOURS_MS).toISOString(),
+        end_datetime: new Date(endDate.getTime() - FOUR_HOURS_MS).toISOString(),
       }
 
       const updated = await api.patch<ScheduledTask>(`/tasks/${task.id}`, payload)
@@ -110,7 +111,6 @@ export function EditScheduleDialog({
       setLoading(false)
     }
   }
-
   if (!task) return null
 
   return (
@@ -152,12 +152,8 @@ export function EditScheduleDialog({
                 id="start-datetime"
                 type="datetime-local"
                 value={startDatetime}
-                onChange={(e) => setStartDatetime(e.target.value ? (() => {
-                  const d = new Date(e.target.value);
-                  d.setHours(d.getHours() - 4);
-                  const pad = (n: number) => String(n).padStart(2, '0');
-                  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-                })() : '')}
+                onChange={(e) => setStartDatetime(e.target.value)}
+                required
                 disabled={loading}
                 className="h-10 text-xs border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
               />
@@ -173,12 +169,7 @@ export function EditScheduleDialog({
                 id="end-datetime"
                 type="datetime-local"
                 value={endDatetime}
-                onChange={(e) => setEndDatetime(e.target.value ? (() => {
-                  const d = new Date(e.target.value);
-                  d.setHours(d.getHours() - 4);
-                  const pad = (n: number) => String(n).padStart(2, '0');
-                  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-                })() : '')}
+                onChange={(e) => setEndDatetime(e.target.value)}
                 required
                 disabled={loading}
                 className="h-10 text-xs border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"

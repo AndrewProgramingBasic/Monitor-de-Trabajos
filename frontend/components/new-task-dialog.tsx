@@ -50,60 +50,62 @@ export function NewTaskDialog({
     setErrorMsg(null)
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+async function handleSubmit(e: React.FormEvent) {
+  e.preventDefault()
 
-    if (!title.trim() || !startDatetime || !endDatetime) {
-      setErrorMsg('El título y las fechas de inicio y fin son obligatorios.')
-      return
-    }
-
-    const startDate = new Date(startDatetime)
-    const endDate = new Date(endDatetime)
-
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      setErrorMsg('Las fechas ingresadas no tienen un formato válido.')
-      return
-    }
-
-    if (endDate <= startDate) {
-      setErrorMsg('La fecha de fin debe ser posterior a la fecha de inicio.')
-      return
-    }
-
-    setLoading(true)
-    setErrorMsg(null)
-
-    try {
-      const payload = {
-        title: title.trim(),
-        cdc_number: cdcNumber.trim() || null,
-        start_datetime: startDate.toISOString(),
-        end_datetime: endDate.toISOString(),
-        has_affectation: hasAffectation,
-        justification: justification.trim() || null,
-        sheet_id: activeSheetId || undefined,
-      }
-
-      await api.post<ScheduledTask>('/tasks', payload)
-
-      toast.success('Tarea creada exitosamente', {
-        description: `Se programó la tarea "${title.trim()}"`,
-      })
-
-      resetForm()
-      onSuccess()
-      onOpenChange(false)
-    } catch (err: any) {
-      const msg = err?.message || 'Error al crear la tarea.'
-      setErrorMsg(msg)
-      toast.error('Error al registrar tarea manual', {
-        description: msg,
-      })
-    } finally {
-      setLoading(false)
-    }
+  if (!title.trim() || !startDatetime || !endDatetime) {
+    setErrorMsg('El título y las fechas de inicio y fin son obligatorios.')
+    return
   }
+
+  const startDate = new Date(startDatetime)
+  const endDate = new Date(endDatetime)
+
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    setErrorMsg('Las fechas ingresadas no tienen un formato válido.')
+    return
+  }
+
+  if (endDate <= startDate) {
+    setErrorMsg('La fecha de fin debe ser posterior a la fecha de inicio.')
+    return
+  }
+
+  setLoading(true)
+  setErrorMsg(null)
+
+  try {
+    const FOUR_HOURS_MS = 14_400_000
+
+    const payload = {
+      title: title.trim(),
+      cdc_number: cdcNumber.trim() || null,
+      start_datetime: new Date(startDate.getTime() - FOUR_HOURS_MS).toISOString(),
+      end_datetime: new Date(endDate.getTime() - FOUR_HOURS_MS).toISOString(),
+      has_affectation: hasAffectation,
+      justification: justification.trim() || null,
+      sheet_id: activeSheetId || undefined,
+    }
+
+    await api.post<ScheduledTask>('/tasks', payload)
+
+    toast.success('Tarea creada exitosamente', {
+      description: `Se programó la tarea "${title.trim()}"`,
+    })
+
+    resetForm()
+    onSuccess()
+    onOpenChange(false)
+  } catch (err: any) {
+    const msg = err?.message || 'Error al crear la tarea.'
+    setErrorMsg(msg)
+    toast.error('Error al registrar tarea manual', {
+      description: msg,
+    })
+  } finally {
+    setLoading(false)
+  }
+}
 
   return (
     <Dialog open={open} onOpenChange={(val) => { if (!loading) { onOpenChange(val); if (!val) resetForm(); } }}>
@@ -180,12 +182,7 @@ export function NewTaskDialog({
                 id="task-start"
                 type="datetime-local"
                 value={startDatetime}
-                onChange={(e) => setStartDatetime(e.target.value ? (() => {
-                  const d = new Date(e.target.value);
-                  d.setHours(d.getHours() - 4);
-                  const pad = (n: number) => String(n).padStart(2, '0');
-                  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-                })() : '')}
+                onChange={(e) => setStartDatetime(e.target.value)}
                 required
                 disabled={loading}
                 className="mt-1.5 h-10 text-xs border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
@@ -199,12 +196,7 @@ export function NewTaskDialog({
                 id="task-end"
                 type="datetime-local"
                 value={endDatetime}
-                onChange={(e) => setEndDatetime(e.target.value ? (() => {
-                  const d = new Date(e.target.value);
-                  d.setHours(d.getHours() - 4);
-                  const pad = (n: number) => String(n).padStart(2, '0');
-                  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-                })() : '')}
+                onChange={(e) => setEndDatetime(e.target.value)}
                 required
                 disabled={loading}
                 className="mt-1.5 h-10 text-xs border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
