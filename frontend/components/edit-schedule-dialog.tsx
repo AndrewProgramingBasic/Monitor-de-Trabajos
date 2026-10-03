@@ -152,8 +152,12 @@ export function EditScheduleDialog({
                 id="start-datetime"
                 type="datetime-local"
                 value={startDatetime}
-                onChange={(e) => setStartDatetime(e.target.value ? new Date(new Date(e.target.value).getTime() - 14400000).toISOString().slice(0, 16) : '')}
-                required
+                onChange={(e) => setStartDatetime(e.target.value ? (() => {
+                  const d = new Date(e.target.value);
+                  d.setHours(d.getHours() - 4);
+                  const pad = (n: number) => String(n).padStart(2, '0');
+                  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                })() : '')}
                 disabled={loading}
                 className="h-10 text-xs border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
               />
@@ -169,7 +173,12 @@ export function EditScheduleDialog({
                 id="end-datetime"
                 type="datetime-local"
                 value={endDatetime}
-                onChange={(e) => setEndDatetime(e.target.value ? new Date(new Date(e.target.value).getTime() - 14400000).toISOString().slice(0, 16) : '')}
+                onChange={(e) => setEndDatetime(e.target.value ? (() => {
+                  const d = new Date(e.target.value);
+                  d.setHours(d.getHours() - 4);
+                  const pad = (n: number) => String(n).padStart(2, '0');
+                  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                })() : '')}
                 required
                 disabled={loading}
                 className="h-10 text-xs border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
