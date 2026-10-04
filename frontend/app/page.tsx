@@ -571,7 +571,6 @@ export default function DashboardPage() {
                   <Table>
                     <TableHeader className="sticky top-0 z-10 bg-slate-50 dark:bg-zinc-800/80">
                       <TableRow className="border-slate-200 dark:border-zinc-800">
-                        <TableHead className="w-12 pl-6 text-slate-700 dark:text-slate-300 font-semibold">N°</TableHead>
                         <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">Tarea / CDC</TableHead>
                         <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">Inicio</TableHead>
                         <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">Fin</TableHead>
@@ -588,9 +587,6 @@ export default function DashboardPage() {
                           className="cursor-pointer border-slate-200 dark:border-zinc-800 hover:bg-blue-50/40 dark:hover:bg-zinc-800/60 transition-colors"
                           onClick={() => handleSelectTask(task)}
                         >
-                          <TableCell className="pl-6 font-mono text-xs text-slate-500 dark:text-slate-400">
-                            {task.sheet_item_order || task.id}
-                          </TableCell>
                           <TableCell className="min-w-[260px]">
                             <div className="flex items-start gap-2">
                               <div>
