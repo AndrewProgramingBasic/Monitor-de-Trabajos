@@ -587,7 +587,7 @@ export default function DashboardPage() {
                           className="cursor-pointer border-slate-200 dark:border-zinc-800 hover:bg-blue-50/40 dark:hover:bg-zinc-800/60 transition-colors"
                           onClick={() => handleSelectTask(task)}
                         >
-                          <TableCell className="w-[380px] max-w-[420px] whitespace-normal">
+                          <TableCell className="w-[380px] max-w-[600px] whitespace-normal">
                             <div className="flex items-start gap-2">
                               <div className="min-w-0 flex-1">
                                 <p className="font-medium text-slate-900 dark:text-slate-100 leading-snug">
