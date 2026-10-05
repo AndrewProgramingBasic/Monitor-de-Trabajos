@@ -587,10 +587,10 @@ export default function DashboardPage() {
                           className="cursor-pointer border-slate-200 dark:border-zinc-800 hover:bg-blue-50/40 dark:hover:bg-zinc-800/60 transition-colors"
                           onClick={() => handleSelectTask(task)}
                         >
-                          <TableCell className="min-w-[260px]">
+                          <TableCell className="min-w-[260px] max-w-lg">
                             <div className="flex items-start gap-2">
-                              <div>
-                                <p className="font-medium text-slate-900 dark:text-slate-100 leading-snug">
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-slate-900 dark:text-slate-100 leading-snug break-words">
                                   {task.title}
                                 </p>
                                 <p className="mt-1 font-mono text-xs text-slate-500 dark:text-slate-400">
