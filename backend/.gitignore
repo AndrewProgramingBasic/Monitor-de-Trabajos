@@ -18,3 +18,6 @@ htmlcov/
 
 # Scheduler Lock
 scheduler.lock
+
+vpti_tasks_db_backup.sql
+3900093086.txt

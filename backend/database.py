@@ -321,6 +321,59 @@ BEGIN
         FOR EACH ROW EXECUTE FUNCTION prevent_table_deletion();
     END IF;
 END $$;
+
+-- 7. FOR12 Files table
+CREATE TABLE IF NOT EXISTS for12_files (
+    id SERIAL PRIMARY KEY,
+    task_id INTEGER NOT NULL REFERENCES scheduled_tasks(id),
+    original_filename VARCHAR(255) NOT NULL,
+    storage_path VARCHAR(500) UNIQUE NOT NULL,
+    file_hash VARCHAR(64) NOT NULL,
+    file_size BIGINT,
+    uploaded_by INTEGER NOT NULL REFERENCES users(id),
+    uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_for12_files_task_hash UNIQUE (task_id, file_hash)
+);
+
+CREATE INDEX IF NOT EXISTS idx_for12_files_task ON for12_files(task_id);
+
+-- 8. FOR12 Messages table
+CREATE TABLE IF NOT EXISTS for12_messages (
+    id SERIAL PRIMARY KEY,
+    file_id INTEGER UNIQUE NOT NULL REFERENCES for12_files(id),
+    message_text TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 9. Task Message View (Redacción FOR12)
+CREATE OR REPLACE VIEW v_task_message AS
+SELECT DISTINCT ON (f.task_id) 
+    f.task_id,
+    t.cdc_number,
+    t.title,
+    m.message_text,
+    f.original_filename,
+    f.storage_path,
+    f.uploaded_at
+FROM for12_files f
+JOIN for12_messages m ON m.file_id = f.id
+JOIN scheduled_tasks t ON t.id = f.task_id
+ORDER BY f.task_id, f.id DESC;
+
+-- Triggers for deletion prevention on for12 tables
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_prevent_delete_for12_files') THEN
+        CREATE TRIGGER trg_prevent_delete_for12_files
+        BEFORE DELETE ON for12_files
+        FOR EACH ROW EXECUTE FUNCTION prevent_table_deletion();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_prevent_delete_for12_messages') THEN
+        CREATE TRIGGER trg_prevent_delete_for12_messages
+        BEFORE DELETE ON for12_messages
+        FOR EACH ROW EXECUTE FUNCTION prevent_table_deletion();
+    END IF;
+END $$;
 """
 
 

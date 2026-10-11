@@ -9,6 +9,7 @@ from flask_jwt_extended import JWTManager
 from config import Config
 from database import check_db_health, init_db
 from routes.auth import auth_bp
+from routes.for12 import for12_bp
 from routes.push import push_bp
 from routes.tasks import tasks_bp
 from routes.upload import upload_bp
@@ -80,6 +81,7 @@ def create_app() -> Flask:
     app.register_blueprint(tasks_bp)
     app.register_blueprint(upload_bp)
     app.register_blueprint(push_bp)
+    app.register_blueprint(for12_bp)
 
     # 4. Standard Health Check Endpoint
     @app.route("/api/health", methods=["GET"])
