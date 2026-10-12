@@ -8,18 +8,18 @@ export const dynamic = 'force-dynamic'
  * completely bypassing browser CORS restrictions.
  */
 export async function POST(req: NextRequest) {
+  let targetUrl = (
+    process.env.REDACTAR_URL ||
+    process.env.NEXT_PUBLIC_REDACTAR_URL ||
+    'http://redactor_app:5000/api/redactar'
+  ).trim()
+
+  if (!/^https?:\/\//i.test(targetUrl)) {
+    targetUrl = `http://${targetUrl}`
+  }
+
   try {
     const formData = await req.formData()
-
-    let targetUrl = (
-      process.env.REDACTAR_URL ||
-      process.env.NEXT_PUBLIC_REDACTAR_URL ||
-      'http://localhost:5000/api/redactar'
-    ).trim()
-
-    if (!/^https?:\/\//i.test(targetUrl)) {
-      targetUrl = `http://${targetUrl}`
-    }
 
     const response = await fetch(targetUrl, {
       method: 'POST',
@@ -43,10 +43,10 @@ export async function POST(req: NextRequest) {
       })
     }
   } catch (error: any) {
-    console.error('Error al conectar con servicio de redacción:', error)
+    console.error(`Error al conectar con servicio de redacción (${targetUrl}):`, error)
     return NextResponse.json(
       {
-        error: `No se pudo conectar con el servicio externo en el puerto 7000: ${error?.message || error}`,
+        error: `No se pudo conectar con el servicio de redacción (${targetUrl}): ${error?.message || error}`,
       },
       { status: 502 }
     )

@@ -273,12 +273,11 @@ export async function generateExternalRedaccion(file: File, cdc: string): Promis
   formData.append('file', file)
   formData.append('cdc', cdc)
 
-  // Use the internal Next.js proxy route (/api/redactar) to forward to localhost:7000
-  // and completely bypass browser cross-origin (CORS) restrictions.
-  const proxyUrl = (
-    process.env.NEXT_PUBLIC_REDACTAR_URL ||
-    'http://localhost:5000/api/redactar'
-  ).trim()
+  // ALWAYS use the relative Next.js proxy route ('/api/redactar').
+  // This ensures the browser sends requests via HTTPS to the same origin,
+  // completely avoiding "Mixed Content" (HTTPS -> HTTP), eliminating CORS blocks,
+  // and allowing the Next.js server to resolve internal Docker hostnames (e.g. redactor_app:5000).
+  const proxyUrl = '/api/redactar'
 
   let response: Response
   try {
