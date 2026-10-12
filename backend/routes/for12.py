@@ -4,6 +4,7 @@ import os
 import re
 from datetime import datetime
 from pathlib import Path
+import requests
 from flask import Blueprint, jsonify, request, send_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from database import get_db_cursor
@@ -487,3 +488,48 @@ def download_for12_file(task_id: int | None = None, file_id: int | None = None):
         as_attachment=True,
         download_name=original_filename,
     )
+
+
+@for12_bp.route("/api/redactar", methods=["POST"])
+def proxy_redactar():
+    """
+    Proxy endpoint for /api/redactar.
+    Forwards multipart/form-data directly to the redactor service container,
+    ensuring that whether Next.js rewrites to redactor directly or through backend,
+    the request succeeds and never returns 404.
+    """
+    target_url = (
+        os.getenv("INTERNAL_REDACTOR_URL")
+        or os.getenv("REDACTOR_SERVICE_URL")
+        or os.getenv("REDACTAR_URL")
+        or os.getenv("NEXT_PUBLIC_REDACTAR_URL")
+        or ("http://redactor_app:5000/api/redactar" if os.getenv("FLASK_ENV") == "production" else "http://localhost:7000/api/redactar")
+    ).strip()
+
+    if not target_url.startswith("http://") and not target_url.startswith("https://"):
+        target_url = f"http://{target_url}"
+    if not target_url.endswith("/api/redactar"):
+        target_url = target_url.rstrip("/") + "/api/redactar"
+
+    try:
+        files = {}
+        for key, storage in request.files.items():
+            files[key] = (storage.filename, storage.read(), storage.content_type)
+        data = {k: v for k, v in request.form.items()}
+
+        resp = requests.post(target_url, data=data, files=files, timeout=60)
+        try:
+            return jsonify(resp.json()), resp.status_code
+        except Exception:
+            return resp.text, resp.status_code, {"Content-Type": resp.headers.get("Content-Type", "text/plain")}
+    except requests.exceptions.RequestException as e:
+        logger.error("Error connecting to redactor service at %s: %s", target_url, e)
+        return (
+            jsonify(
+                {
+                    "error": f"No se pudo conectar con el servicio de redacción ({target_url}): {str(e)}",
+                }
+            ),
+            502,
+        )
+
