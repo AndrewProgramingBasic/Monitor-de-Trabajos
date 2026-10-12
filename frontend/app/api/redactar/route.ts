@@ -10,11 +10,11 @@ export const dynamic = 'force-dynamic'
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
-    
+
     let targetUrl = (
       process.env.REDACTAR_URL ||
       process.env.NEXT_PUBLIC_REDACTAR_URL ||
-      'http://localhost:7000/api/redactar'
+      'http://localhost:5000/api/redactar'
     ).trim()
 
     if (!/^https?:\/\//i.test(targetUrl)) {

@@ -275,7 +275,10 @@ export async function generateExternalRedaccion(file: File, cdc: string): Promis
 
   // Use the internal Next.js proxy route (/api/redactar) to forward to localhost:7000
   // and completely bypass browser cross-origin (CORS) restrictions.
-  const proxyUrl = '/redactar'
+  const proxyUrl = (
+    process.env.NEXT_PUBLIC_REDACTAR_URL ||
+    'http://localhost:5000/api/redactar'
+  ).trim()
 
   let response: Response
   try {
