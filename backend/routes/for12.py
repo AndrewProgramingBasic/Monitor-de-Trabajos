@@ -491,12 +491,12 @@ def download_for12_file(task_id: int | None = None, file_id: int | None = None):
 
 
 @for12_bp.route("/api/redactar", methods=["POST"])
+@for12_bp.route("/api/for12/redactar", methods=["POST"])
 def proxy_redactar():
     """
-    Proxy endpoint for /api/redactar.
+    Proxy endpoint for /api/redactar and /api/for12/redactar.
     Forwards multipart/form-data directly to the redactor service container,
-    ensuring that whether Next.js rewrites to redactor directly or through backend,
-    the request succeeds and never returns 404.
+    ensuring that the request succeeds and provides actionable diagnostics if it fails.
     """
     target_url = (
         os.getenv("INTERNAL_REDACTOR_URL")
@@ -508,7 +508,7 @@ def proxy_redactar():
 
     if not target_url.startswith("http://") and not target_url.startswith("https://"):
         target_url = f"http://{target_url}"
-    if not target_url.endswith("/api/redactar"):
+    if not target_url.endswith("/api/redactar") and not target_url.endswith("/redactar"):
         target_url = target_url.rstrip("/") + "/api/redactar"
 
     try:
@@ -518,6 +518,15 @@ def proxy_redactar():
         data = {k: v for k, v in request.form.items()}
 
         resp = requests.post(target_url, data=data, files=files, timeout=60)
+
+        # Fallback if 404: maybe the service is mounted at /redactar instead of /api/redactar
+        if resp.status_code == 404 and "/api/redactar" in target_url:
+            alt_url = target_url.replace("/api/redactar", "/redactar")
+            logger.info("404 received on %s, trying alternative endpoint %s", target_url, alt_url)
+            alt_resp = requests.post(alt_url, data=data, files=files, timeout=60)
+            if alt_resp.status_code != 404:
+                resp = alt_resp
+
         try:
             return jsonify(resp.json()), resp.status_code
         except Exception:

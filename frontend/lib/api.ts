@@ -273,11 +273,10 @@ export async function generateExternalRedaccion(file: File, cdc: string): Promis
   formData.append('file', file)
   formData.append('cdc', cdc)
 
-  // ALWAYS use the relative Next.js proxy route ('/api/redactar').
-  // This ensures the browser sends requests via HTTPS to the same origin,
-  // completely avoiding "Mixed Content" (HTTPS -> HTTP), eliminating CORS blocks,
-  // and allowing the Next.js server to resolve internal Docker hostnames (e.g. redactor_app:5000).
-  const proxyUrl = '/api/redactar'
+  // Send via the backend's for12 proxy endpoint (/api/for12/redactar).
+  // This routes through vpti_backend which can reliably communicate with redactor_app
+  // across Docker networks, avoiding browser Mixed Content and CORS issues.
+  const proxyUrl = `${API_BASE_URL}/for12/redactar`
 
   let response: Response
   try {
@@ -302,7 +301,7 @@ export async function generateExternalRedaccion(file: File, cdc: string): Promis
   }
 
   if (!response.ok) {
-    const msg = data?.error || data?.message || `Error HTTP ${response.status}`
+    const msg = data?.error || data?.message || data?.detail || `Error HTTP ${response.status}`
     throw new Error(`Error en servicio de redacción: ${msg}`)
   }
 
