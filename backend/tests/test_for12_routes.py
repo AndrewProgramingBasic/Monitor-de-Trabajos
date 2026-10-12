@@ -406,3 +406,33 @@ def test_get_task_message_nonexistent_task(client_and_token):
     assert resp.status_code == 404
     assert resp.get_json()["has_message"] is False
     assert "no fue encontrado" in resp.get_json()["error"]
+
+
+def test_normalize_escaped_newlines(client_and_token):
+    client, token, _ = client_and_token
+    excel_buf = make_dummy_excel()
+    # String with literal backslash+n
+    escaped_text = "Estimado cliente:\\nSe da inicio al trabajo.\\n\\nDetalles: CDC 3900093086"
+
+    upload_resp = client.post(
+        "/api/for12/upload",
+        headers={"Authorization": f"Bearer {token}"},
+        data={
+            "task_id": "77",
+            "message": escaped_text,
+            "file": (excel_buf, "FOR12_test_newlines.xlsx"),
+        },
+        content_type="multipart/form-data",
+    )
+    assert upload_resp.status_code == 201
+
+    get_resp = client.get(
+        "/api/tasks/77/message",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert get_resp.status_code == 200
+    msg = get_resp.get_json()["message_text"]
+    assert "\\n" not in msg
+    assert "\n" in msg
+    assert "Estimado cliente:\nSe da inicio al trabajo.\n\nDetalles: CDC 3900093086" == msg
+

@@ -34,6 +34,9 @@ import {
   Loader2,
   SlidersHorizontal,
   Info,
+  FileSpreadsheet,
+  FileText,
+  RefreshCw,
 } from 'lucide-react'
 
 interface TaskDetailDialogProps {
@@ -41,6 +44,8 @@ interface TaskDetailDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onOpenEditSchedule: (task: ScheduledTask) => void
+  onOpenUploadFor12?: (task: ScheduledTask) => void
+  onOpenViewRedaccion?: (task: ScheduledTask) => void
   onTaskUpdated?: (updatedTask: ScheduledTask) => void
   formatDateTime: (iso: string | null | undefined) => string
   statusStyles: Record<string, string>
@@ -51,6 +56,8 @@ export function TaskDetailDialog({
   open,
   onOpenChange,
   onOpenEditSchedule,
+  onOpenUploadFor12,
+  onOpenViewRedaccion,
   onTaskUpdated,
   formatDateTime,
   statusStyles,
@@ -447,25 +454,77 @@ export function TaskDetailDialog({
           </div>
         </div>
 
-        <DialogFooter className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800 bg-transparent">
-          <Button
-            type="button"
-            className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-medium text-sm px-4 py-2 rounded-xl transition-colors shadow-sm"
-            onClick={() => onOpenChange(false)}
-          >
-            Cerrar
-          </Button>
-          <Button
-            type="button"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2 rounded-xl shadow-sm transition-all inline-flex items-center gap-2"
-            onClick={() => {
-              onOpenChange(false)
-              onOpenEditSchedule(currentTask)
-            }}
-          >
-            <CalendarClock className="size-4" data-icon="inline-start" />
-            Editar horario
-          </Button>
+        <DialogFooter className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800 bg-transparent">
+          <div className="flex items-center gap-2">
+            {!currentTask.has_for12 ? (
+              onOpenUploadFor12 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 text-xs font-semibold px-3 py-2 rounded-xl"
+                  onClick={() => {
+                    onOpenChange(false)
+                    onOpenUploadFor12(currentTask)
+                  }}
+                >
+                  <FileSpreadsheet className="size-4 mr-1.5 text-blue-600" />
+                  Cargar FOR12
+                </Button>
+              )
+            ) : (
+              <>
+                {onOpenViewRedaccion && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 text-xs font-semibold px-3 py-2 rounded-xl"
+                    onClick={() => {
+                      onOpenChange(false)
+                      onOpenViewRedaccion(currentTask)
+                    }}
+                  >
+                    <FileText className="size-4 mr-1.5 text-emerald-600" />
+                    Ver redacción
+                  </Button>
+                )}
+                {onOpenUploadFor12 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="bg-slate-100 hover:bg-blue-50 text-slate-700 border-slate-200 text-xs font-medium px-2.5 py-2 rounded-xl"
+                    onClick={() => {
+                      onOpenChange(false)
+                      onOpenUploadFor12(currentTask)
+                    }}
+                  >
+                    <RefreshCw className="size-3.5 mr-1 text-slate-500" />
+                    Actualizar FOR12
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-medium text-sm px-4 py-2 rounded-xl transition-colors shadow-sm"
+              onClick={() => onOpenChange(false)}
+            >
+              Cerrar
+            </Button>
+            <Button
+              type="button"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2 rounded-xl shadow-sm transition-all inline-flex items-center gap-2"
+              onClick={() => {
+                onOpenChange(false)
+                onOpenEditSchedule(currentTask)
+              }}
+            >
+              <CalendarClock className="size-4" data-icon="inline-start" />
+              Editar horario
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

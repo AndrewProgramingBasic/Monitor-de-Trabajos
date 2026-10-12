@@ -16,6 +16,7 @@ import {
   Clock3,
   Download,
   FileSpreadsheet,
+  FileText,
   Filter,
   History,
   Layers,
@@ -64,6 +65,8 @@ import { LoginView } from '@/components/login-view'
 import { EditScheduleDialog } from '@/components/edit-schedule-dialog'
 import { RegisterUserDialog } from '@/components/register-user-dialog'
 import { TaskDetailDialog } from '@/components/task-detail-dialog'
+import { UploadFor12Dialog } from '@/components/upload-for12-dialog'
+import { ViewRedaccionDialog } from '@/components/view-redaccion-dialog'
 import { TaskFilters } from '@/components/task-filters'
 import { toast } from 'sonner'
 
@@ -182,6 +185,13 @@ export default function HistoryPage() {
   const [editScheduleOpen, setEditScheduleOpen] = useState(false)
   const [registerUserOpen, setRegisterUserOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+
+  // FOR12 Modals state
+  const [uploadFor12Task, setUploadFor12Task] = useState<ScheduledTask | null>(null)
+  const [uploadFor12Open, setUploadFor12Open] = useState(false)
+  const [viewRedaccionTask, setViewRedaccionTask] = useState<ScheduledTask | null>(null)
+  const [viewRedaccionOpen, setViewRedaccionOpen] = useState(false)
+  const [generatedMessage, setGeneratedMessage] = useState<string | null>(null)
 
   // Push notifications state
   const [pushEnabled, setPushEnabled] = useState(false)
@@ -402,6 +412,34 @@ export default function HistoryPage() {
   }
 
   // Summary statistics for auditing
+  // FOR12 handlers
+  function handleOpenUploadFor12(task: ScheduledTask) {
+    setUploadFor12Task(task)
+    setUploadFor12Open(true)
+  }
+
+  function handleOpenViewRedaccion(task: ScheduledTask) {
+    setViewRedaccionTask(task)
+    setGeneratedMessage(null)
+    setViewRedaccionOpen(true)
+  }
+
+  function handleFor12Success(messageText: string) {
+    if (uploadFor12Task) {
+      const updatedId = uploadFor12Task.id
+      setTasks((prev) =>
+        prev.map((t) => (t.id === updatedId ? { ...t, has_for12: true } : t))
+      )
+      if (selectedTask && selectedTask.id === updatedId) {
+        setSelectedTask((prev) => (prev ? { ...prev, has_for12: true } : null))
+      }
+      setViewRedaccionTask(uploadFor12Task)
+      setGeneratedMessage(messageText)
+      setViewRedaccionOpen(true)
+    }
+    fetchTasks()
+  }
+
   const stats = useMemo(() => {
     const total = tasks.length
     const withAffectation = tasks.filter((t) => t.has_affectation === 'SI').length
@@ -599,7 +637,7 @@ export default function HistoryPage() {
                   <TableHead className="min-w-[190px] font-bold text-slate-700 dark:text-slate-300">Ventana Operativa</TableHead>
                   <TableHead className="w-48 text-center font-bold text-slate-700 dark:text-slate-300">Estado</TableHead>
                   <TableHead className="w-24 text-center font-bold text-slate-700 dark:text-slate-300">Afectación</TableHead>
-                  <TableHead className="w-24 text-right font-bold text-slate-700 dark:text-slate-300">Acción</TableHead>
+                  <TableHead className="pr-6 text-right font-bold text-slate-700 dark:text-slate-300 min-w-[240px]">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -687,18 +725,55 @@ export default function HistoryPage() {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200 hover:border-blue-300 text-xs font-medium px-2.5 py-1 rounded-md transition-all shadow-none"
-                          onClick={() => {
-                            setSelectedTask(task)
-                            setTaskDetailOpen(true)
-                          }}
-                        >
-                          Ver detalle
-                        </Button>
+                      <TableCell className="pr-6 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          {!task.has_for12 ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 border border-blue-200 hover:border-blue-300 text-xs font-semibold px-2.5 py-1 rounded-md transition-all shadow-none inline-flex items-center gap-1.5"
+                              onClick={() => handleOpenUploadFor12(task)}
+                              title="Cargar archivo FOR12 y generar redacción"
+                            >
+                              <FileSpreadsheet className="size-3.5 text-blue-600" />
+                              Cargar FOR12
+                            </Button>
+                          ) : (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 border border-emerald-200 hover:border-emerald-300 text-xs font-semibold px-2.5 py-1 rounded-md transition-all shadow-none inline-flex items-center gap-1.5"
+                                onClick={() => handleOpenViewRedaccion(task)}
+                                title="Ver redacción generada para este trabajo"
+                              >
+                                <FileText className="size-3.5 text-emerald-600" />
+                                Ver redacción
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200 hover:border-blue-300 text-xs font-medium px-2 py-1 rounded-md transition-all shadow-none inline-flex items-center gap-1"
+                                onClick={() => handleOpenUploadFor12(task)}
+                                title="Actualizar archivo FOR12"
+                              >
+                                <RefreshCw className="size-3 text-slate-500" />
+                                Actualizar FOR12
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200 hover:border-blue-300 text-xs font-medium px-2.5 py-1 rounded-md transition-all shadow-none"
+                            onClick={() => {
+                              setSelectedTask(task)
+                              setTaskDetailOpen(true)
+                            }}
+                          >
+                            Ver detalle
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -745,21 +820,58 @@ export default function HistoryPage() {
                     <span>Afectación: <strong className={task.has_affectation === 'SI' ? 'text-red-600' : 'text-slate-700'}>{task.has_affectation}</strong></span>
                     <span>Matriz: <strong className="text-slate-700 dark:text-slate-300">{task.committee_name || 'Manual'}</strong></span>
                   </div>
-                  <div className="flex items-center justify-between pt-2">
+                  <div className="flex flex-col gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
                     <div className="text-[10px] text-slate-400">
                       Inicio: {formatDateTime(task.start_datetime)}
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="bg-slate-100 text-slate-700 border-slate-200 text-xs px-2 py-0.5 rounded-md"
-                      onClick={() => {
-                        setSelectedTask(task)
-                        setTaskDetailOpen(true)
-                      }}
-                    >
-                      Ver detalle
-                    </Button>
+                    <div className="flex flex-wrap items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      {!task.has_for12 ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 text-xs h-7 px-2 font-medium"
+                          onClick={() => handleOpenUploadFor12(task)}
+                        >
+                          <FileSpreadsheet className="size-3 mr-1 text-blue-600" />
+                          Cargar FOR12
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 text-xs h-7 px-2 font-medium"
+                            onClick={() => handleOpenViewRedaccion(task)}
+                          >
+                            <FileText className="size-3 mr-1 text-emerald-600" />
+                            Ver redacción
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="bg-slate-100 hover:bg-blue-50 text-slate-700 border-slate-200 text-xs h-7 px-2"
+                            onClick={() => handleOpenUploadFor12(task)}
+                          >
+                            <RefreshCw className="size-3 mr-1 text-slate-500" />
+                            Actualizar FOR12
+                          </Button>
+                        </>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="bg-slate-100 text-slate-700 border-slate-200 text-xs px-2 h-7 rounded-md"
+                        onClick={() => {
+                          setSelectedTask(task)
+                          setTaskDetailOpen(true)
+                        }}
+                      >
+                        Ver detalle
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -773,6 +885,8 @@ export default function HistoryPage() {
         task={selectedTask}
         open={taskDetailOpen}
         onOpenChange={setTaskDetailOpen}
+        onOpenUploadFor12={handleOpenUploadFor12}
+        onOpenViewRedaccion={handleOpenViewRedaccion}
         onTaskUpdated={(updatedTask) => {
           setSelectedTask(updatedTask)
           setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)))
@@ -803,6 +917,24 @@ export default function HistoryPage() {
       <UserProfileModal
         open={profileOpen}
         onOpenChange={setProfileOpen}
+      />
+
+      <UploadFor12Dialog
+        task={uploadFor12Task}
+        open={uploadFor12Open}
+        onOpenChange={setUploadFor12Open}
+        onSuccess={handleFor12Success}
+      />
+
+      <ViewRedaccionDialog
+        task={viewRedaccionTask}
+        open={viewRedaccionOpen}
+        onOpenChange={setViewRedaccionOpen}
+        onOpenUpdateFor12={(task) => {
+          setViewRedaccionOpen(false)
+          handleOpenUploadFor12(task)
+        }}
+        initialMessage={generatedMessage}
       />
     </main>
   )

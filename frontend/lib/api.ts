@@ -54,6 +54,7 @@ export interface ScheduledTask {
   updated_by: number | null
   updated_by_name?: string | null
   execution_status: 'PROGRAMADO' | 'PROXIMO (MENOS DE 1 HORA)' | 'EN EJECUCION' | 'TERMINADO' | 'SUSPENDIDO' | string
+  has_for12?: boolean
 }
 
 export interface CommitteeSheet {
@@ -245,4 +246,85 @@ export const api = {
     })
   },
 }
+
+export interface TaskMessageResponse {
+  task_id: number
+  cdc_number: string | null
+  title: string
+  message_text: string
+  original_filename: string
+  storage_path: string
+  uploaded_at: string
+  has_message: boolean
+}
+
+export interface For12UploadResponse {
+  message: string
+  data: TaskMessageResponse
+}
+
+/**
+ * Sends the FOR12 Excel file and CDC number to the external service
+ * at http://localhost:7000/api/redactar via multipart/form-data.
+ * Extracts and returns the 'resultado_texto' field from the response.
+ */
+export async function generateExternalRedaccion(file: File, cdc: string): Promise<string> {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('cdc', cdc)
+
+  // Use the internal Next.js proxy route (/api/redactar) to forward to localhost:7000
+  // and completely bypass browser cross-origin (CORS) restrictions.
+  const proxyUrl = '/api/redactar'
+
+  let response: Response
+  try {
+    response = await fetch(proxyUrl, {
+      method: 'POST',
+      body: formData,
+    })
+  } catch (netErr: any) {
+    throw new Error(
+      `No se pudo conectar con el servicio de redacción: ${netErr?.message || netErr}`
+    )
+  }
+
+  let data: any = null
+  try {
+    data = await response.json()
+  } catch {
+    const textErr = await response.text().catch(() => '')
+    throw new Error(
+      `El servicio de redacción respondió con status ${response.status}: ${textErr}`
+    )
+  }
+
+  if (!response.ok) {
+    const msg = data?.error || data?.message || `Error HTTP ${response.status}`
+    throw new Error(`Error en servicio de redacción: ${msg}`)
+  }
+
+  if (!data || typeof data.resultado_texto !== 'string') {
+    throw new Error(
+      'La API externa no devolvió la propiedad "resultado_texto" esperada en el formato JSON.'
+    )
+  }
+
+  return normalizeMessageText(data.resultado_texto)
+}
+
+/**
+ * Normalizes literal escaped newlines ("\n", "\r\n", "\\n") and carriage returns
+ * into standard newline characters '\n' so text preserves paragraphs and formatting.
+ */
+export function normalizeMessageText(text: string | null | undefined): string {
+  if (!text) return ''
+  return text
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\n')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+}
+
 

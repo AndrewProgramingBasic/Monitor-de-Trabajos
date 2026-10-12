@@ -288,7 +288,8 @@ SELECT
         ELSE 'PROGRAMADO'
     END AS execution_status,
     cs.filename AS sheet_filename,
-    cs.uploaded_at AS sheet_uploaded_at
+    cs.uploaded_at AS sheet_uploaded_at,
+    (EXISTS (SELECT 1 FROM for12_files ff WHERE ff.task_id = t.id)) AS has_for12
 FROM scheduled_tasks t
 LEFT JOIN committee_sheets cs ON t.sheet_id = cs.id
 LEFT JOIN users u_creator ON t.created_by = u_creator.id

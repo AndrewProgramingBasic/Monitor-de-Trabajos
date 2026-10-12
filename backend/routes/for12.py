@@ -25,12 +25,28 @@ def is_allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def normalize_message_newlines(text: str) -> str:
+    """Normalizes literal escaped newlines (\\n, \\r\\n) and carriage returns to real newlines."""
+    if not text:
+        return ""
+    return (
+        str(text)
+        .replace("\\r\\n", "\n")
+        .replace("\\n", "\n")
+        .replace("\\r", "\n")
+        .replace("\r\n", "\n")
+        .replace("\r", "\n")
+    )
+
+
 def serialize_for12_record(row: dict) -> dict:
-    """Serializes datetime objects in a for12 view dictionary to ISO strings."""
+    """Serializes datetime objects in a for12 view dictionary to ISO strings and normalizes newlines."""
     res = dict(row)
     for key in ("uploaded_at", "created_at"):
         if res.get(key) and hasattr(res[key], "isoformat"):
             res[key] = res[key].isoformat()
+    if res.get("message_text"):
+        res["message_text"] = normalize_message_newlines(res["message_text"])
     return res
 
 
@@ -124,7 +140,7 @@ def upload_for12_and_message(task_id: int | None = None):
             ),
             400,
         )
-    message_text = str(message_text).strip()
+    message_text = normalize_message_newlines(str(message_text).strip())
 
     # Validate file
     file = (
