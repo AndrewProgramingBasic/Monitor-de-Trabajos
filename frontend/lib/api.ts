@@ -276,7 +276,7 @@ export async function generateExternalRedaccion(file: File, cdc: string): Promis
   // Send via the backend's for12 proxy endpoint (/api/for12/redactar).
   // This routes through vpti_backend which can reliably communicate with redactor_app
   // across Docker networks, avoiding browser Mixed Content and CORS issues.
-  const proxyUrl = `${API_BASE_URL}/for12/redactar`
+  const proxyUrl = `${process.env.NEXT_PUBLIC_REDACTAR_URL}/for12/redactar`
 
   let response: Response
   try {
