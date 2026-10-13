@@ -12,7 +12,7 @@ const nextConfig = {
       process.env.INTERNAL_BACKEND_URL ||
       (process.env.NODE_ENV === 'production'
         ? 'http://vpti_backend:5000'
-        : 'http://127.0.0.1:5000')
+        : 'https://redactor.adantechte.com')
 
     return [
       {
