@@ -4,12 +4,11 @@ export const dynamic = 'force-dynamic'
 
 /**
  * Proxy Route Handler for external redactar service.
- * Proxies multipart/form-data from the browser to localhost:7000
+ * Proxies multipart/form-data from the browser to redactor_app:5000
  * completely bypassing browser CORS restrictions.
  */
 export async function POST(req: NextRequest) {
   let targetUrl = (
-    process.env.REDACTAR_URL ||
     process.env.NEXT_PUBLIC_REDACTAR_URL ||
     'http://redactor_app:5000/api/redactar'
   ).trim()
