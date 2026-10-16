@@ -44,7 +44,7 @@ interface TaskDetailDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onOpenEditSchedule: (task: ScheduledTask) => void
-  onOpenUploadFor12?: (task: ScheduledTask) => void
+  onOpenUploadFor12?: (task: ScheduledTask, droppedFile?: File | null) => void
   onOpenViewRedaccion?: (task: ScheduledTask) => void
   onTaskUpdated?: (updatedTask: ScheduledTask) => void
   formatDateTime: (iso: string | null | undefined) => string
@@ -466,6 +466,20 @@ export function TaskDetailDialog({
                     onOpenChange(false)
                     onOpenUploadFor12(currentTask)
                   }}
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    const droppedFile = e.dataTransfer?.files?.[0]
+                    if (droppedFile) {
+                      onOpenChange(false)
+                      onOpenUploadFor12(currentTask, droppedFile)
+                    }
+                  }}
+                  title="Haz clic o arrastra un archivo Excel FOR12 aquí"
                 >
                   <FileSpreadsheet className="size-4 mr-1.5 text-blue-600" />
                   Cargar FOR12
@@ -491,11 +505,25 @@ export function TaskDetailDialog({
                   <Button
                     type="button"
                     variant="outline"
-                    className="bg-slate-100 hover:bg-blue-50 text-slate-700 border-slate-200 text-xs font-medium px-2.5 py-2 rounded-xl"
+                    className="bg-slate-100 hover:bg-blue-50 text-slate-700 border-slate-300 text-xs font-medium px-2.5 py-2 rounded-xl"
                     onClick={() => {
                       onOpenChange(false)
                       onOpenUploadFor12(currentTask)
                     }}
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      const droppedFile = e.dataTransfer?.files?.[0]
+                      if (droppedFile) {
+                        onOpenChange(false)
+                        onOpenUploadFor12(currentTask, droppedFile)
+                      }
+                    }}
+                    title="Haz clic o arrastra un archivo Excel FOR12 aquí"
                   >
                     <RefreshCw className="size-3.5 mr-1 text-slate-500" />
                     Actualizar FOR12
@@ -508,6 +536,7 @@ export function TaskDetailDialog({
           <div className="flex items-center gap-2">
             <Button
               type="button"
+              variant="outline"
               className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-medium text-sm px-4 py-2 rounded-xl transition-colors shadow-sm"
               onClick={() => onOpenChange(false)}
             >

@@ -229,7 +229,7 @@ export function ViewRedaccionDialog({
                 variant="outline"
                 size="sm"
                 onClick={handleCopy}
-                className="text-xs h-8 font-medium gap-1.5 bg-white dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700"
+                className="text-xs h-8 font-medium gap-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 shadow-xs"
               >
                 {copied ? (
                   <>
@@ -251,7 +251,7 @@ export function ViewRedaccionDialog({
                 variant="outline"
                 size="sm"
                 onClick={handleDownload}
-                className="text-xs h-8 font-medium gap-1.5 bg-white dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 text-slate-700 dark:text-slate-200"
+                className="text-xs h-8 font-medium gap-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 shadow-xs"
               >
                 <Download className="size-3.5" />
                 Descargar Excel
@@ -269,7 +269,7 @@ export function ViewRedaccionDialog({
                   onOpenChange(false)
                   onOpenUpdateFor12(task)
                 }}
-                className="text-xs h-8 font-medium gap-1.5 border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-900 dark:text-blue-400"
+                className="text-xs h-8 font-medium gap-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700"
               >
                 <RefreshCw className="size-3.5" />
                 Actualizar FOR12
@@ -278,10 +278,10 @@ export function ViewRedaccionDialog({
 
             <Button
               type="button"
-              variant="default"
+              variant="outline"
               size="sm"
               onClick={() => onOpenChange(false)}
-              className="text-xs h-8 bg-slate-800 hover:bg-slate-900 text-white dark:bg-zinc-700 dark:hover:bg-zinc-600 font-medium"
+              className="text-xs h-8 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-medium px-3 rounded-lg transition-colors shadow-xs"
             >
               Cerrar
             </Button>

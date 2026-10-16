@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ interface UploadFor12DialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: (generatedMessage: string) => void
+  initialFile?: File | null
 }
 
 export function UploadFor12Dialog({
@@ -26,6 +27,7 @@ export function UploadFor12Dialog({
   open,
   onOpenChange,
   onSuccess,
+  initialFile = null,
 }: UploadFor12DialogProps) {
   const [file, setFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -44,12 +46,29 @@ export function UploadFor12Dialog({
     )
 
     if (!hasValidExt) {
+      setFile(null)
       setErrorMsg('Formato de archivo no válido. Se admiten archivos Excel (.xlsx, .xls, .xlsm).')
       return
     }
 
     setFile(selectedFile)
   }
+
+  useEffect(() => {
+    if (open) {
+      if (initialFile) {
+        handleFileSelect(initialFile)
+      } else {
+        setFile(null)
+        setErrorMsg(null)
+      }
+      setCurrentStep(null)
+    } else {
+      setFile(null)
+      setErrorMsg(null)
+      setCurrentStep(null)
+    }
+  }, [open, initialFile])
 
   function handleDragOver(e: React.DragEvent) {
     e.preventDefault()
@@ -208,9 +227,9 @@ export function UploadFor12Dialog({
                 </div>
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="mt-1 h-7 text-xs text-slate-500 hover:text-red-600"
+                  className="mt-1 h-7 text-xs bg-white hover:bg-slate-100 text-slate-700 hover:text-red-600 border border-slate-300 px-2.5 rounded-lg transition-colors"
                   onClick={(e) => {
                     e.stopPropagation()
                     setFile(null)
@@ -262,13 +281,13 @@ export function UploadFor12Dialog({
           )}
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t border-slate-100 dark:border-zinc-800">
+        <DialogFooter className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800 bg-transparent">
           <Button
             type="button"
             variant="outline"
             onClick={handleClose}
             disabled={processing}
-            className="text-xs"
+            className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-medium text-xs px-4 py-2 rounded-xl transition-colors shadow-sm"
           >
             Cancelar
           </Button>
@@ -276,7 +295,7 @@ export function UploadFor12Dialog({
             type="button"
             onClick={handleSubmit}
             disabled={!file || processing}
-            className="bg-[#0d6efd] hover:bg-blue-700 text-white text-xs font-semibold"
+            className="bg-[#0d6efd] hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-sm transition-all"
           >
             {processing ? (
               <>

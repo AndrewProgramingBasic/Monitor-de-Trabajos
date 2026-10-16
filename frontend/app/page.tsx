@@ -177,6 +177,8 @@ export default function DashboardPage() {
   // FOR12 Modals state
   const [uploadFor12Task, setUploadFor12Task] = useState<ScheduledTask | null>(null)
   const [uploadFor12Open, setUploadFor12Open] = useState(false)
+  const [preselectedFor12File, setPreselectedFor12File] = useState<File | null>(null)
+  const [dragOverTaskId, setDragOverTaskId] = useState<number | null>(null)
   const [viewRedaccionTask, setViewRedaccionTask] = useState<ScheduledTask | null>(null)
   const [viewRedaccionOpen, setViewRedaccionOpen] = useState(false)
   const [generatedMessage, setGeneratedMessage] = useState<string | null>(null)
@@ -245,7 +247,14 @@ export default function DashboardPage() {
       fetchTasks()
     }
   }, [isAuthenticated, fetchTasks])
+  
+  useEffect(() => {
+  const intervalId = setInterval(() => {
+    fetchTasks()
+  }, 10 * 60 * 1000)
 
+  return () => clearInterval(intervalId)
+}, [fetchTasks])
   // Initialize Service Worker and check push subscription
   useEffect(() => {
     let isMounted = true
@@ -335,9 +344,36 @@ export default function DashboardPage() {
   }
 
   // FOR12 handlers
-  function handleOpenUploadFor12(task: ScheduledTask) {
+  function handleOpenUploadFor12(task: ScheduledTask, droppedFile: File | null = null) {
+    setPreselectedFor12File(droppedFile)
     setUploadFor12Task(task)
     setUploadFor12Open(true)
+  }
+
+  function handleFor12DragOver(e: React.DragEvent, taskId: number) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (dragOverTaskId !== taskId) {
+      setDragOverTaskId(taskId)
+    }
+  }
+
+  function handleFor12DragLeave(e: React.DragEvent, taskId: number) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (dragOverTaskId === taskId) {
+      setDragOverTaskId(null)
+    }
+  }
+
+  function handleFor12Drop(e: React.DragEvent, task: ScheduledTask) {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverTaskId(null)
+    const droppedFile = e.dataTransfer?.files?.[0]
+    if (droppedFile) {
+      handleOpenUploadFor12(task, droppedFile)
+    }
   }
 
   function handleOpenViewRedaccion(task: ScheduledTask) {
@@ -694,17 +730,29 @@ export default function DashboardPage() {
                             <div
                               className="flex items-center justify-end gap-1.5"
                               onClick={(e) => e.stopPropagation()}
+                              onDragOver={(e) => handleFor12DragOver(e, task.id)}
+                              onDragEnter={(e) => handleFor12DragOver(e, task.id)}
+                              onDragLeave={(e) => handleFor12DragLeave(e, task.id)}
+                              onDrop={(e) => handleFor12Drop(e, task)}
                             >
                               {!task.has_for12 ? (
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 border border-blue-200 hover:border-blue-300 text-xs font-semibold px-2.5 py-1 rounded-md transition-all shadow-none inline-flex items-center gap-1.5"
+                                  className={`text-xs font-semibold px-2.5 py-1 rounded-md transition-all shadow-none inline-flex items-center gap-1.5 ${
+                                    dragOverTaskId === task.id
+                                      ? 'bg-blue-100 text-blue-800 border-2 border-dashed border-blue-500 ring-2 ring-blue-400/50 scale-[1.03]'
+                                      : 'bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 border border-blue-200 hover:border-blue-300'
+                                  }`}
                                   onClick={() => handleOpenUploadFor12(task)}
-                                  title="Cargar archivo FOR12 y generar redacción"
+                                  onDragOver={(e) => handleFor12DragOver(e, task.id)}
+                                  onDragEnter={(e) => handleFor12DragOver(e, task.id)}
+                                  onDragLeave={(e) => handleFor12DragLeave(e, task.id)}
+                                  onDrop={(e) => handleFor12Drop(e, task)}
+                                  title="Haz clic o arrastra y suelta un archivo Excel FOR12 aquí"
                                 >
                                   <FileSpreadsheet className="size-3.5 text-blue-600" />
-                                  Cargar FOR12
+                                  {dragOverTaskId === task.id ? 'Soltar FOR12 aquí' : 'Cargar FOR12'}
                                 </Button>
                               ) : (
                                 <>
@@ -721,19 +769,27 @@ export default function DashboardPage() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200 hover:border-blue-300 text-xs font-medium px-2 py-1 rounded-md transition-all shadow-none inline-flex items-center gap-1"
+                                    className={`text-xs font-medium px-2 py-1 rounded-md transition-all shadow-none inline-flex items-center gap-1 ${
+                                      dragOverTaskId === task.id
+                                        ? 'bg-blue-100 text-blue-800 border-2 border-dashed border-blue-500 ring-2 ring-blue-400/50 scale-[1.03]'
+                                        : 'bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-300 hover:border-blue-300'
+                                    }`}
                                     onClick={() => handleOpenUploadFor12(task)}
-                                    title="Actualizar archivo FOR12"
+                                    onDragOver={(e) => handleFor12DragOver(e, task.id)}
+                                    onDragEnter={(e) => handleFor12DragOver(e, task.id)}
+                                    onDragLeave={(e) => handleFor12DragLeave(e, task.id)}
+                                    onDrop={(e) => handleFor12Drop(e, task)}
+                                    title="Haz clic o arrastra y suelta un archivo Excel FOR12 aquí"
                                   >
                                     <RefreshCw className="size-3 text-slate-500" />
-                                    Actualizar FOR12
+                                    {dragOverTaskId === task.id ? 'Soltar FOR12 aquí' : 'Actualizar FOR12'}
                                   </Button>
                                 </>
                               )}
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200 hover:border-blue-300 text-xs font-medium px-2.5 py-1 rounded-md transition-all shadow-none"
+                                className="bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-300 hover:border-blue-300 text-xs font-medium px-2.5 py-1 rounded-md transition-all shadow-none"
                                 onClick={() => handleSelectTask(task)}
                               >
                                 Ver detalle
@@ -813,17 +869,29 @@ export default function DashboardPage() {
                       <div
                         className="flex flex-wrap items-center justify-end gap-1.5 pt-2 border-t border-slate-100 dark:border-zinc-800"
                         onClick={(e) => e.stopPropagation()}
+                        onDragOver={(e) => handleFor12DragOver(e, task.id)}
+                        onDragEnter={(e) => handleFor12DragOver(e, task.id)}
+                        onDragLeave={(e) => handleFor12DragLeave(e, task.id)}
+                        onDrop={(e) => handleFor12Drop(e, task)}
                       >
                         {!task.has_for12 ? (
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 text-xs h-7 px-2 font-medium"
+                            className={`text-xs h-7 px-2 font-medium ${
+                              dragOverTaskId === task.id
+                                ? 'bg-blue-100 text-blue-800 border-2 border-dashed border-blue-500 ring-2 ring-blue-400/50'
+                                : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
+                            }`}
                             onClick={() => handleOpenUploadFor12(task)}
+                            onDragOver={(e) => handleFor12DragOver(e, task.id)}
+                            onDragEnter={(e) => handleFor12DragOver(e, task.id)}
+                            onDragLeave={(e) => handleFor12DragLeave(e, task.id)}
+                            onDrop={(e) => handleFor12Drop(e, task)}
                           >
                             <FileSpreadsheet className="size-3 mr-1 text-blue-600" />
-                            Cargar FOR12
+                            {dragOverTaskId === task.id ? 'Soltar FOR12' : 'Cargar FOR12'}
                           </Button>
                         ) : (
                           <>
@@ -841,11 +909,19 @@ export default function DashboardPage() {
                               type="button"
                               variant="outline"
                               size="sm"
-                              className="bg-slate-100 hover:bg-blue-50 text-slate-700 border-slate-200 text-xs h-7 px-2"
+                              className={`text-xs h-7 px-2 ${
+                                dragOverTaskId === task.id
+                                  ? 'bg-blue-100 text-blue-800 border-2 border-dashed border-blue-500 ring-2 ring-blue-400/50'
+                                  : 'bg-slate-100 hover:bg-blue-50 text-slate-700 border-slate-300'
+                              }`}
                               onClick={() => handleOpenUploadFor12(task)}
+                              onDragOver={(e) => handleFor12DragOver(e, task.id)}
+                              onDragEnter={(e) => handleFor12DragOver(e, task.id)}
+                              onDragLeave={(e) => handleFor12DragLeave(e, task.id)}
+                              onDrop={(e) => handleFor12Drop(e, task)}
                             >
                               <RefreshCw className="size-3 mr-1 text-slate-500" />
-                              Actualizar FOR12
+                              {dragOverTaskId === task.id ? 'Soltar FOR12' : 'Actualizar FOR12'}
                             </Button>
                           </>
                         )}
@@ -853,7 +929,7 @@ export default function DashboardPage() {
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs h-7 px-2"
+                          className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs h-7 px-2"
                           onClick={() => handleSelectTask(task)}
                         >
                           Ver detalle
@@ -927,8 +1003,12 @@ export default function DashboardPage() {
       <UploadFor12Dialog
         task={uploadFor12Task}
         open={uploadFor12Open}
-        onOpenChange={setUploadFor12Open}
+        onOpenChange={(open) => {
+          setUploadFor12Open(open)
+          if (!open) setPreselectedFor12File(null)
+        }}
         onSuccess={handleFor12Success}
+        initialFile={preselectedFor12File}
       />
 
       <ViewRedaccionDialog

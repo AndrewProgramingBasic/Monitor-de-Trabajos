@@ -75,9 +75,10 @@ def list_tasks():
 
     if status and status.lower() != "all":
         if status.strip().upper().startswith("PROXIMO"):
-            clauses.append("UPPER(execution_status) LIKE 'PROXIMO%'")
+            clauses.append("COALESCE(UPPER(execution_status), '') LIKE %s")
+            params.append("PROXIMO%")
         else:
-            clauses.append("UPPER(execution_status) = UPPER(%s)")
+            clauses.append("COALESCE(UPPER(execution_status), '') = UPPER(%s)")
             params.append(status.strip())
 
     if is_rescheduled_raw is not None:
@@ -113,11 +114,15 @@ def list_tasks():
         ORDER BY start_datetime ASC, sheet_item_order ASC;
     """
 
-    with get_db_cursor(commit=False) as cur:
-        cur.execute(query, tuple(params))
-        rows = cur.fetchall()
+    try:
+        with get_db_cursor(commit=False) as cur:
+            cur.execute(query, tuple(params))
+            rows = cur.fetchall() or []
+    except Exception as exc:
+        logger.error("Error querying v_scheduled_tasks (status=%s): %s", status, exc)
+        return jsonify([]), 200
 
-    tasks = [serialize_task_record(row) for row in rows]
+    tasks = [serialize_task_record(row) for row in rows if row]
     return jsonify(tasks), 200
 
 

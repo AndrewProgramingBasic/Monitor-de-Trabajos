@@ -235,6 +235,7 @@ export function UserProfileModal({ open, onOpenChange }: UserProfileModalProps) 
           <DialogFooter className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800 bg-transparent">
             <Button
               type="button"
+              variant="outline"
               className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-medium text-xs px-4 py-2 rounded-xl transition-colors shadow-sm"
               onClick={() => onOpenChange(false)}
               disabled={loading}

@@ -44,6 +44,9 @@ def client_and_token(monkeypatch):
             self.last_params = ()
 
         def execute(self, query, params=None):
+            if params is not None:
+                # Simulate psycopg2 mogrify % interpolation validation
+                _ = query % tuple(params)
             self.last_query = query
             self.last_params = params or ()
             q = query.lower()
@@ -159,7 +162,21 @@ def client_and_token(monkeypatch):
         def fetchall(self):
             q = self.last_query.lower()
             if "from v_scheduled_tasks" in q:
-                return list(tasks_db.values())
+                results = list(tasks_db.values())
+                if "execution_status" in q and self.last_params:
+                    status_param = str(self.last_params[0]).upper()
+                    if status_param.endswith("%"):
+                        prefix = status_param[:-1]
+                        results = [
+                            r for r in results
+                            if str(r.get("execution_status", "")).upper().startswith(prefix)
+                        ]
+                    else:
+                        results = [
+                            r for r in results
+                            if str(r.get("execution_status", "")).upper() == status_param
+                        ]
+                return results
             return []
 
     @contextmanager
@@ -188,6 +205,23 @@ def test_list_tasks(client_and_token):
     assert len(tasks) >= 1
     assert tasks[0]["cdc_number"] == "3900092507"
     assert "start_datetime" in tasks[0]
+
+
+def test_list_tasks_proximo_filter_empty(client_and_token):
+    client, token = client_and_token
+    res = client.get(
+        "/api/tasks?status=PROXIMO",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert res.get_json() == []
+
+    res_full = client.get(
+        "/api/tasks?status=PROXIMO%20(ALERTAS%20/%20PREAVISO)",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res_full.status_code == 200
+    assert res_full.get_json() == []
 
 
 def test_create_task_manual(client_and_token):

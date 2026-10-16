@@ -279,12 +279,15 @@ SELECT
     COALESCE(u_updater.full_name, u_updater.username) AS updated_by_name,
     COALESCE(u_man_up.full_name, u_man_up.username) AS manual_status_updated_by_name,
     CASE
-        WHEN t.manual_status IS NOT NULL THEN t.manual_status
-        WHEN (CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') >= t.end_datetime THEN 'TERMINADO'
-        WHEN (CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') >= t.start_datetime 
-             AND (CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') < t.end_datetime THEN 'EN EJECUCION'
-        WHEN (CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') >= (t.start_datetime - INTERVAL '{Config.ALERT_PREWARNING_MINUTES} minutes') 
-             AND (CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') < t.start_datetime THEN 'PROXIMO (MENOS DE {Config.ALERT_PREWARNING_MINUTES} MINUTOS)'
+        WHEN t.manual_status IS NOT NULL AND TRIM(t.manual_status) <> '' THEN t.manual_status
+        WHEN t.end_datetime IS NOT NULL
+             AND (CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') >= (t.end_datetime AT TIME ZONE '{Config.TIMEZONE}') THEN 'TERMINADO'
+        WHEN t.start_datetime IS NOT NULL AND t.end_datetime IS NOT NULL
+             AND (CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') >= (t.start_datetime AT TIME ZONE '{Config.TIMEZONE}') 
+             AND (CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') < (t.end_datetime AT TIME ZONE '{Config.TIMEZONE}') THEN 'EN EJECUCION'
+        WHEN t.start_datetime IS NOT NULL
+             AND (CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') >= ((t.start_datetime AT TIME ZONE '{Config.TIMEZONE}') - INTERVAL '{int(Config.ALERT_PREWARNING_MINUTES)} minutes') 
+             AND (CURRENT_TIMESTAMP AT TIME ZONE '{Config.TIMEZONE}') < (t.start_datetime AT TIME ZONE '{Config.TIMEZONE}') THEN 'PROXIMO (MENOS DE {int(Config.ALERT_PREWARNING_MINUTES)} MINUTOS)'
         ELSE 'PROGRAMADO'
     END AS execution_status,
     cs.filename AS sheet_filename,
